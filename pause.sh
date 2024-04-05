@@ -1,28 +1,52 @@
 #! /usr/bin/bash
+###################################################################################################################################################
+# 
+# MIT License 
+#
+# Copyright (c) 2024 Grawmpy 
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy 
+# of this software and associated documentation files (the "Software"), to deal 
+# in the Software without restriction, including without limitation the rights 
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell 
+# copies of the Software, and to permit persons to whom the Software is 
+# furnished to do so, subject to the following conditions: 
+#
+# The above copyright notice and this permission notice shall be included in all 
+# copies or substantial portions of the Software. 
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE 
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE 
+# SOFTWARE. 
+###################################################################################################################################################
 # This script allow for the interruption of the current process until either the
-# timer reaches 00 or the user presses any key. If no timer is used the process
+# timer reaches 00 or the user presses any key. If no timer is used, the process
 # will be stopped indefinitely until the user manually continues the process with
 # the press of any key except shift. Using the timer (in seconds only) continues 
-# the current process without user intervention.
+# the current process without user interaction.
 
 # Examples of use:
 
 # input: (no options)
-# $ command
+# $ ./pause.sh
 # output:
 # $ Press any key to continue...
 # $
 
 # input: (with timer)
-# $ command -t 10 [or, --timer 10]
+# $ ./pause.sh -t 10 [or, --timer 10]
 # output:
 # $ [10] Press any key to continue...
 # $
 
 # input: (with timer, custom prompt and custom response text)
-# $ command --timer 10 --prompt '*Finished process 1*' --response '** Continuing with process 2 **'
+# $ ./pause.sh --timer 10 --prompt '*Finished process 1*' --response '** Continuing with process 2 **'
 #   or 
-# $ command -t 10 -p 'Finished process 1' -r '-- Continuing with process 2 --'
+# $ ./pause.sh -t 10 -p 'Finished process 1' -r '-- Continuing with process 2 --'
 # output:
 # $ [10] Finished process 1
 # $ -- Continuing with process 2 --
