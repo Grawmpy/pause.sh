@@ -46,10 +46,10 @@
 # input: (with timer, custom prompt and custom response text)
 # $ ./pause.sh --timer 10 --prompt '*Finished process 1*' --response '** Continuing with process 2 **'
 #   or 
-# $ ./pause.sh -t 10 -p 'Finished process 1' -r '-- Continuing with process 2 --'
+# $ ./pause.sh -t 10 -p 'Finished process 1' -r '** Continuing with process 2 **'
 # output:
 # $ [10] Finished process 1
-# $ -- Continuing with process 2 --
+# $ ** Continuing with process 2 **
 # $
 
 declare DEFAULT_PROMPT RETURN_TEXT SCRIPT VERSION COPYRIGHT DESCRIPTION arg OPTION LOOP_COUNT text_prompt return_prompt
