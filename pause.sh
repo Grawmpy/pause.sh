@@ -52,24 +52,26 @@
 # $ -- Continuing with process 2 --
 # $
 
-declare DEFAULT_PROMPT
-declare -i TIMER
-
+declare DEFAULT_PROMPT RETURN_TEXT SCRIPT VERSION COPYRIGHT DESCRIPTION arg OPTION LOOP_COUNT text_prompt return_prompt
+declare -i TIMER isQuiet LOOP_COUNT
+unset TIMER isQuiet DEFAULT_PROMPT RETURN_TEXT SCRIPT VERSION COPYRIGHT DESCRIPTION arg OPTION LOOP_COUNT text_prompt return_prompt
 DEFAULT_PROMPT="Press any key to continue..."
 SCRIPT="$(basename "$0")"
-VERSION='2.0.1'
-AUTHOR='CSPhelps'
-COPYRIGHT="Software is intended as free use and is offered 
+VERSION='3.0.1'
+# AUTHOR='CSPhelps'
+COPYRIGHT="MIT License. Software is intended as free use and is offered 
 'as is' with no implied guarantees or copyrights."
 DESCRIPTION="A simple script that interrupts the current process. 
-Optional custom prompt message and countdown timer. 
-Command will interrupt process indefinitely until 
-  any key is pressed or optional timer reaches 00. 
-All arguments are optional."
 
+Optional custom prompt message and COUNTdown timer. 
+
+Command will interrupt process indefinitely until 
+  user presses any key or optional timer reaches 00. 
+"
 for arg in "$@"; do
   shift
   case "$arg" in
+    '--quiet'    ) set -- "$@" '-q'   ;;
     '--timer'    ) set -- "$@" '-t'   ;;
     '--prompt'   ) set -- "$@" '-p'   ;;
     '--response' ) set -- "$@" '-r'   ;;
@@ -78,38 +80,67 @@ for arg in "$@"; do
   esac
 done
 
-while getopts ":t:p:r:h" OPTION; do
+while getopts "qt:p:r:h" OPTION; do
   case "$OPTION" in
     t)  TIMER="${OPTARG//^[0-9]/}"
+        if [[ -z $TIMER ]] ; then echo "Timer not set" ; exit 2 ; fi
         ;;
     p)  DEFAULT_PROMPT="${OPTARG}" ;
         ;;
     r)  RETURN_TEXT="${OPTARG}" ;      
     ;;
-    h)  echo "${SCRIPT} v.${VERSION} by ${AUTHOR}
-        ${COPYRIGHT}
-        ${DESCRIPTION}
-        Usage:
-        ${SCRIPT} [-p, --prompt] [-t , --timer] [-r, --response] [-h, --help]
+    h)  
+echo "${SCRIPT} v.${VERSION}
 
-        All arguments are optional.
-          -p, --prompt    [ custom prompt text (string must be in quotes) ]
-          -t, --timer     [ countdown in seconds ]
-          -r, --response  [ custom response when continuing (string must be in quotes) ]
-          -h, --help      [ this information ]
-        "  
+${COPYRIGHT}
+
+${DESCRIPTION}
+
+Default prompt: ${DEFAULT_PROMPT}
+
+Usage:
+${SCRIPT} [-p|--prompt ] [-t|--timer ] [-r|--response ] [-h|--help] [-q|--quiet] 
+
+    -p, --prompt    [ input required (string must be in quotes) ]
+    -t, --timer     [ number of seconds ]
+    -r, --response  [ requires text (string must be in quotes) ]
+    -h, --help      [ this information ]
+    -q, --quiet     [ quiets text, requires timer be set. ]
+
+Examples:
+Input:  $ ${SCRIPT}
+Output: $ ${DEFAULT_PROMPT}
+
+Input:  $ ${SCRIPT} -t <seconds>
+Output: $ [timer] ${DEFAULT_PROMPT}
+
+Input:  $ ${SCRIPT} --prompt \"Optional Prompt\" --response \"Your response\"
+Output: $ Optional Prompt
+        $ Your Response
+
+Input:  $ ${SCRIPT} -p \"Optional Prompt\" -r \"[ Your response ]\" --timer <seconds>
+Output: $ [timer] Optional Prompt
+        $ [ Your Response ]
+
+[ seconds are converted to 00h:00m:00s style format ]
+"  
         exit 0 
         ;;
-    ?)  printf '\r%s\n\n' "${SCRIPT} v.${VERSION} by ${AUTHOR}"
-        printf '\r%s\n\n' "${COPYRIGHT}" 
-        printf '\r%s\n\n' "${DESCRIPTION}"
-        printf '\r%s\n' "Usage:"
-        printf '\r%s\n' " All arguments are optional.
-        -p, --prompt    [ custom prompt text (string must be in quotes) ]
-        -t, --timer     [ countdown in seconds ]
-        -r, --response  [ custom response when continuing (string must be in quotes) ]
-        -h, --help      [ this information ]
-        "
+    q ) isQuiet=0
+    ;;
+    ?)  
+echo "${SCRIPT} v.${VERSION}
+${COPYRIGHT}
+${DESCRIPTION}
+Usage:
+${SCRIPT} [-p|--prompt ] [-t|--timer ] [-r|--response ] [-h|--help] [-q|--quiet] 
+
+    -p, --prompt    [ input required (string must be in quotes) ]
+    -t, --timer     [ number of seconds ]
+    -r, --response  [ requires text (string must be in quotes) ]
+    -h, --help      [ this information ]
+    -q, --quiet     [ quiet text, requires timer be set. ]
+"
         exit 1
         ;;
   esac
@@ -117,34 +148,104 @@ done
 
 shift "$(( OPTIND - 1 ))"
 
+quiet(){ 
+local LOOP_COUNT="${1}"
+while (( LOOP_COUNT > 0 )) ; do
+    tput el
+    COUNT="${LOOP_COUNT}"
+    y=$(bc <<< "${COUNT}/31536000") ; COUNT=$(( COUNT % 31536000 ))
+    M=$(bc <<< "${COUNT}/2592000") ; COUNT=$(( COUNT % 2592000 ))
+    w=$(bc <<< "${COUNT}/604800") ; COUNT=$(( COUNT % 604800 ))
+    d=$(bc <<< "${COUNT}/86400") ; COUNT=$(( COUNT % 86400 ))
+    h=$(bc <<< "${COUNT}/3600") ; COUNT=$(( COUNT % 3600 ))
+    m=$(bc <<< "${COUNT}/60")  ; COUNT=$(( COUNT % 60 ))
+    s=$(bc <<< "${COUNT}%60"); 
+    (( LOOP_COUNT = LOOP_COUNT - 1 ))
+    read -rsn1 -t1 &>/dev/null 2>&1
+    errorcode=$?
+    [[ $errorcode -eq 0 ]] && LOOP_COUNT=0
+done
+}
+
 # timer interrupt
 interrupt0(){
-    local loop_count="${TIMER}"
-    local text_prompt="${DEFAULT_PROMPT}"
-    local return_prompt="${RETURN_TEXT}"
+    local LOOP_COUNT="${1}"
+    local text_prompt="${2}"
+    local return_prompt="${3}"
     tput civis
-    while (( loop_count > 0 )) ; do
-        printf "[%02d] ${text_prompt[*]} \r" "${loop_count}" >&2
-        (( loop_count = loop_count - 1 ))
-        read -rn1 -t1 &>/dev/null 2>&1
+    while (( LOOP_COUNT > 0 )) ; do
+        tput el
+        printf '[%s]' "$( 
+        COUNT="${LOOP_COUNT}"
+        y=$(bc <<< "${COUNT}/31536000")
+            if (( y > 0 )) ; 
+                then 
+                    printf '%02dy:' "$y" ; 
+            fi ;
+            COUNT=$(( COUNT % 31536000 ))
+        M=$(bc <<< "${COUNT}/2592000")
+                    if (( M > 0 )) ; 
+                        then 
+                            printf '%02dm:' "$M" ; 
+                    fi ; 
+            COUNT=$(( COUNT % 2592000 ))
+        w=$(bc <<< "${COUNT}/604800")
+                    if (( w > 0 )) ; 
+                        then 
+                            printf '%02dw:' "$w" ; 
+                    fi ; 
+            COUNT=$(( COUNT % 604800 ))
+        d=$(bc <<< "${COUNT}/86400") ; 
+            COUNT=$(( COUNT % 86400 ))
+                if (( d > 0 )) ; 
+                    then 
+                        printf '%02dd:' "$d" ; 
+                fi ; 
+
+        h=$(bc <<< "${COUNT}/3600") ;  
+                    if (( h > 0 )) ; 
+                        then 
+                            printf '%02dh:' "$h" ; 
+                    fi ; 
+            COUNT=$(( COUNT % 3600 ))
+
+        m=$(bc <<< "${COUNT}/60") ; 
+                    if (( m > 0 )); 
+                        then 
+                            printf '%02d:' "$m" ; 
+                    fi ; 
+            COUNT=$(( COUNT % 60 ))
+
+        s=$(bc <<< "${COUNT}%60"); 
+            if (( s >= 0 )) ; 
+                then 
+                    printf '%02d' "$s" ; 
+            fi
+    )" ; 
+        printf ' %s\r' "${text_prompt}"
+#        printf "[%02d] ${text_prompt[*]} \r" "${LOOP_COUNT}" >&2
+        (( LOOP_COUNT = LOOP_COUNT - 1 ))
+        read -rsn1 -t1 &>/dev/null 2>&1
         errorcode=$?
-        [[ $errorcode -eq 0 ]] && loop_count=0
+        [[ $errorcode -eq 0 ]] && LOOP_COUNT=0
     done 
+
     tput cnorm 
-#    tput nel
+    
     if [[ -n ${return_prompt} ]] ; 
     then 
         tput nel ; printf '%s\r\n' "${return_prompt}" ; 
     else 
         tput nel ; 
     fi
+
     return 0
 } ;
 
 # pause interrupt
 interrupt1(){ 
-    local text_prompt="${DEFAULT_PROMPT}"
-    local return_prompt="${RETURN_TEXT}"
+    local text_prompt="${1}"
+    local return_prompt="${2}"
     printf '%s\n' "$(read -rsn 1 -p "${text_prompt[*]}" )"
     #tput nel
     if [[ -n ${return_prompt} ]] ; 
@@ -153,11 +254,21 @@ interrupt1(){
     return 0 
 } ;
 
+if  [[ -n ${isQuiet} ]] && [[ -n ${TIMER} ]] ; 
+    then quiet "${TIMER}" ; 
+fi
 
-if [[ "${TIMER}" -ne 0 ]] ; 
-then 
-    interrupt0 "${TIMER}" "${DEFAULT_PROMPT}" "${RETURN_TEXT}" ; exit $? ; 
-else 
-    interrupt1 "${DEFAULT_PROMPT}" "${RETURN_TEXT}" ; 
+if [[ -z ${isQuiet} ]] && [[ -n ${TIMER} ]]; 
+    then 
+        interrupt0 "${TIMER}" "${DEFAULT_PROMPT}" "${RETURN_TEXT}" ; 
+        exit $? ; 
+fi
+
+if [[ -z ${isQuiet} ]] && [[ -z ${TIMER} ]]; 
+    then interrupt1 "${DEFAULT_PROMPT}" "${RETURN_TEXT}" ; 
     exit $? ; 
+fi
+
+if [[ -z ${isQuiet} ]] && [[ -z ${TIMER} ]]; 
+    then : ; 
 fi
