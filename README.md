@@ -20,7 +20,7 @@ Binary available of this script: https://github.com/Grawmpy/pause.sh/releases
     Output: $ Press any key to continue...
             $
     
-    Input:  $ ./pause.sh -t <seconds>
+    Input:  $ ./pause.sh --timer <seconds>
     Output: $ [timer] Press any key to continue...
             $
     
@@ -29,7 +29,7 @@ Binary available of this script: https://github.com/Grawmpy/pause.sh/releases
             $ Your Response
             $
     
-    Input:  $ ./pause -p \"Optional Prompt\" -r \"[ Your response ]\" --timer <seconds>
+    Input:  $ ./pause -p \"Optional Prompt\" -r \"[ Your response ]\" -t <seconds>
     Output: $ [timer] Optional Prompt
             $ [ Your Response ]
             $
