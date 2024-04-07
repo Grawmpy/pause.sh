@@ -3,10 +3,11 @@ Simple pause script that interrupts a program until either user presses any key 
 timer (-t, --timer) reaches 00. Interupt is indefinite and requires user input to continue without timer option.
 Optional prompt text entry (-p, --prompt) and response text (-r, --response) entry allow for customization. 
 Quiet mode available for timer with no text output. Default is no timer and no response after keypress.
-Default prompt is "Press any key to continue..." 
+Default prompt is "Press any key to continue..."
+
 Binary available of this script: https://github.com/Grawmpy/pause.sh/releases/tag/pause
 
-    $ pause.sh [-p|--prompt ] [-t|--timer ] [-r|--response ] [-h|--help] [-q|--quie ] 
+    $ ./pause.sh [-p|--prompt ] [-t|--timer ] [-r|--response ] [-h|--help] [-q|--quiet ] 
 
     -p, --prompt    [ input required (string must be in quotes) ]
     -t, --timer     [ number of seconds ]
@@ -15,20 +16,20 @@ Binary available of this script: https://github.com/Grawmpy/pause.sh/releases/ta
     -q, --quiet     [ quiets text, requires timer be set. ]
 
     Examples:
-    Input:  $ pause
+    Input:  $ ./pause.sh
     Output: $ Press any key to continue...
             $
     
-    Input:  $ pause -t <seconds>
+    Input:  $ ./pause.sh -t <seconds>
     Output: $ [timer] Press any key to continue...
             $
     
-    Input:  $ pause --prompt "Optional Prompt" --response "Your response"
+    Input:  $ ./pause --prompt "Optional Prompt" --response "Your response"
     Output: $ Optional Prompt
             $ Your Response
             $
     
-    Input:  $ pause -p \"Optional Prompt\" -r \"[ Your response ]\" --timer <seconds>
+    Input:  $ ./pause -p \"Optional Prompt\" -r \"[ Your response ]\" --timer <seconds>
     Output: $ [timer] Optional Prompt
             $ [ Your Response ]
             $
