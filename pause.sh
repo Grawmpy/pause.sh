@@ -3,7 +3,7 @@
 # 
 # MIT License 
 #
-# Copyright (c) 2024 Grawmpy 
+# Copyright (c) 2024 Grawmpy (CSPhelps)
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy 
 # of this software and associated documentation files (the "Software"), to deal 
@@ -58,7 +58,6 @@ unset TIMER isQuiet DEFAULT_PROMPT RETURN_TEXT SCRIPT VERSION COPYRIGHT DESCRIPT
 DEFAULT_PROMPT="Press any key to continue..."
 SCRIPT="$(basename "$0")"
 VERSION='3.0.1'
-# AUTHOR='CSPhelps'
 COPYRIGHT="MIT License. Software is intended as free use and is offered 
 'as is' with no implied guarantees or copyrights."
 DESCRIPTION="A simple script that interrupts the current process. 
