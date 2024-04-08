@@ -14,7 +14,7 @@ Binary available of this script: https://github.com/Grawmpy/pause.sh/releases
     -p, --prompt    [ input required (string must be in quotes) ]
     -t, --timer     [ number of seconds ]
     -r, --response  [ requires text (string must be in quotes) ]
-    -h, --help      [ this information ]
+    -h, --help      [ help information ]
     -q, --quiet     [ quiets text, requires timer be set. ]
 
     Examples:
