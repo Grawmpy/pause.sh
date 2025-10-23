@@ -45,9 +45,9 @@ SCRIPT="$(basename "$0")"
 VERSION='3.1'
 COPYRIGHT="Software is intended as free use and is offered 
 'as is' with no implied guarantees or copyrights."
-DESCRIPTION="A simple script that interrupts the current process until kwy press or timer countdown finishes. 
+DESCRIPTION="A simple script that interrupts the current process until a key press or timer countdown finishes. 
 
-Optional custom prompt message and COUNTdown timer. 
+Optional custom prompt message and countdown timer. 
 
 Command will interrupt process indefinitely until 
   user presses any key or optional timer reaches 00. 
