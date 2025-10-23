@@ -1,20 +1,5 @@
 #! /usr/bin/bash
 ###################################################################################################################################################
-# 
-# MIT License 
-#
-# Copyright (c) 2024 Grawmpy (CSPhelps)
-#
-# Permission is hereby granted, free of charge, to any person obtaining a copy 
-# of this software and associated documentation files (the "Software"), to deal 
-# in the Software without restriction, including without limitation the rights 
-# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell 
-# copies of the Software, and to permit persons to whom the Software is 
-# furnished to do so, subject to the following conditions: 
-#
-# The above copyright notice and this permission notice shall be included in all 
-# copies or substantial portions of the Software. 
-#
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
 # FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE 
@@ -57,10 +42,10 @@ declare -i TIMER isQuiet LOOP_COUNT
 unset TIMER isQuiet DEFAULT_PROMPT RETURN_TEXT SCRIPT VERSION COPYRIGHT DESCRIPTION arg OPTION LOOP_COUNT text_prompt return_prompt
 DEFAULT_PROMPT="Press any key to continue..."
 SCRIPT="$(basename "$0")"
-VERSION='3.0.1'
-COPYRIGHT="MIT License. Software is intended as free use and is offered 
+VERSION='3.1'
+COPYRIGHT="Software is intended as free use and is offered 
 'as is' with no implied guarantees or copyrights."
-DESCRIPTION="A simple script that interrupts the current process. 
+DESCRIPTION="A simple script that interrupts the current process until kwy press or timer countdown finishes. 
 
 Optional custom prompt message and COUNTdown timer. 
 
