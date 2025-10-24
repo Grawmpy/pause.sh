@@ -94,9 +94,9 @@ Default prompt: ${DEFAULT_PROMPT}
 Usage:
 ${SCRIPT} [-p|--prompt ] [-t|--timer ] [-r|--response ] [-h|--help] [-q|--quiet] 
 
-    -p, --prompt    [ input required (string must be in quotes) ]
+    -p, --prompt    [ text string required (string must be in quotes) ]
     -t, --timer     [ number of seconds ]
-    -r, --response  [ requires text (string must be in quotes) ]
+    -r, --response  [ text string required (string must be in quotes) ]
     -h, --help      [ this information ]
     -q, --quiet     [ quiets text, requires timer be set. ]
 
@@ -128,9 +128,9 @@ ${DESCRIPTION}
 Usage:
 ${SCRIPT} [-p|--prompt ] [-t|--timer ] [-r|--response ] [-h|--help] [-q|--quiet] 
 
-    -p, --prompt    [ input required (string must be in quotes) ]
+    -p, --prompt    [ text string required (string must be in quotes) ]
     -t, --timer     [ number of seconds ]
-    -r, --response  [ requires text (string must be in quotes) ]
+    -r, --response  [ text string required (string must be in quotes) ]
     -h, --help      [ this information ]
     -q, --quiet     [ quiet text, requires timer be set. ]
 "
