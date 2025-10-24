@@ -1,20 +1,27 @@
 #! /usr/bin/bash
+###################################################################################################################################################
+###################################################################################################################################################
+###################################################################################################################################################
+#  pause.sh
 #  Version: 3.1
 #  Author: Grawmpy
+#  Description: This script allows for the interruption of the current process until either the
+#  timer reaches 00 or the user presses any key. If no timer is used, the process
+#  will be stopped indefinitely until the user manually continues the process with
+#  the press of any key except shift. Using the timer (in seconds only) continues 
+#  the current process without user interaction. The order of the variables passed 
+#  to the script in any order, doesn't matter, they are processed as they are read and 
+#  applied to the final output.
+#  Copyright: THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
+#  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
+#  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE 
+#  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
+#  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
+#  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE 
+#  SOFTWARE. 
 ###################################################################################################################################################
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
-# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
-# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE 
-# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
-# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
-# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE 
-# SOFTWARE. 
 ###################################################################################################################################################
-# This script allow for the interruption of the current process until either the
-# timer reaches 00 or the user presses any key. If no timer is used, the process
-# will be stopped indefinitely until the user manually continues the process with
-# the press of any key except shift. Using the timer (in seconds only) continues 
-# the current process without user interaction.
+###################################################################################################################################################
 
 # Examples of use:
 
