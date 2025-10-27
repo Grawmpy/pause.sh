@@ -5,6 +5,10 @@ Optional prompt text entry (-p, --prompt) and response text (-r, --response) ent
 Quiet mode available for timer with no text output. Default is no timer and no response after keypress.
 Default prompt is "Press any key to continue..."
 
+Binary created with the command "shc -f pause.sh -o pause -r -D"
+
+Hash for binary: 46bb809b08b2c4cb8bb7d1504bca753557c4ea881e6dedec924ce1817b2d1078
+
 Shellcheck verified.
 
 Binary available of this script: https://github.com/Grawmpy/pause.sh/releases
