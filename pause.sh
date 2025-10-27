@@ -50,7 +50,7 @@ declare DEFAULT_PROMPT RETURN_TEXT SCRIPT VERSION COPYRIGHT DESCRIPTION arg OPTI
 declare -i TIMER isQuiet LOOP_COUNT
 unset TIMER isQuiet DEFAULT_PROMPT RETURN_TEXT SCRIPT VERSION COPYRIGHT DESCRIPTION arg OPTION LOOP_COUNT text_prompt return_prompt
 DEFAULT_PROMPT="Press any key to continue..."
-SCRIPT="$(basename "$0")"
+SCRIPT="${0##*/}"
 VERSION='3.1'
 COPYRIGHT="Software is intended as free use and is offered 
 'as is' with no implied guarantees or copyrights."
@@ -144,7 +144,7 @@ shift "$(( OPTIND - 1 ))"
 quiet(){ 
 local LOOP_COUNT="${1}"
 while (( LOOP_COUNT > 0 )) ; do
-    tput el
+    printf "\e[K"
     COUNT="${LOOP_COUNT}"
     y=$(bc <<< "${COUNT}/31536000") ; COUNT=$(( COUNT % 31536000 ))
     M=$(bc <<< "${COUNT}/2592000") ; COUNT=$(( COUNT % 2592000 ))
@@ -165,9 +165,9 @@ interrupt0(){
     local LOOP_COUNT="${1}"
     local text_prompt="${2}"
     local return_prompt="${3}"
-    tput civis
+    printf "\e[?25l"
     while (( LOOP_COUNT > 0 )) ; do
-        tput el
+        printf "\e[K"
         printf '[%s]' "$( 
         COUNT="${LOOP_COUNT}"
         y=$(bc <<< "${COUNT}/31536000")
@@ -223,13 +223,13 @@ interrupt0(){
         [[ $errorcode -eq 0 ]] && LOOP_COUNT=0
     done 
 
-    tput cnorm 
+    printf "\e[?25h" 
     
     if [[ -n ${return_prompt} ]] ; 
     then 
-        tput nel ; printf '%s\r\n' "${return_prompt}" ; 
+        printf '\n%s\r\n' "${return_prompt}" ; 
     else 
-        tput nel ; 
+        printf "\n" ; 
     fi
 
     return 0
@@ -240,9 +240,8 @@ interrupt1(){
     local text_prompt="${1}"
     local return_prompt="${2}"
     printf '%s\n' "$(read -rsn 1 -p "${text_prompt[*]}" )"
-    #tput nel
     if [[ -n ${return_prompt} ]] ; 
-        then tput nel ; printf '%s\r\n' "${return_prompt}" ; 
+        then echo -e "\n" ; printf '%s\r\n' "${return_prompt}" ; 
     fi
     return 0 
 } ;
