@@ -7,7 +7,7 @@ Default prompt is "Press any key to continue..."
 
 Binary created with the command "shc -f pause.sh -o pause -r -D"
 
-Hash for binary: 46bb809b08b2c4cb8bb7d1504bca753557c4ea881e6dedec924ce1817b2d1078
+Hash for binary: 3278104bc7bf742de1e5a6959eda8174bbea09affab3f30627c5ea08b5999920
 
 Shellcheck verified.
 
