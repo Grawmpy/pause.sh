@@ -51,7 +51,30 @@ Usage:
 ${SCRIPT} [-p|--prompt ] [-t|--timer ] [-r|--response ] [-h|--help] [-q|--quiet] 
 
 Examples:
-$(description of examples)
+${SCRIPT} [-p|--prompt ] [-t|--timer ] [-r|--response ] [-h|--help] [-q|--quiet] 
+
+    -p, --prompt    [ input required (string must be in quotes) ]
+    -t, --timer     [ number of seconds ]
+    -r, --response  [ requires text (string must be in quotes) ]
+    -h, --help      [ this information ]
+    -q, --quiet     [ quiets text, requires timer be set. ]
+
+Examples:
+Input:  $ ${SCRIPT}
+Output: $ ${DEFAULT_PROMPT}
+
+Input:  $ ${SCRIPT} -t <seconds>
+Output: $ [timer] ${DEFAULT_PROMPT}
+
+Input:  $ ${SCRIPT} --prompt \"Optional Prompt\" --response \"Your response\"
+Output: $ Optional Prompt
+        $ Your Response
+
+Input:  $ ${SCRIPT} -p \"Optional Prompt\" -r \"[ Your response ]\" --timer <seconds>
+Output: $ [timer] Optional Prompt
+        $ [ Your Response ]
+
+[ seconds are converted to 00h:00m:00s style format ]
 
 "  
         exit 0 
