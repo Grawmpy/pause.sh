@@ -61,8 +61,8 @@ Optional custom prompt message and countdown timer.
 Command will interrupt process indefinitely until 
   user presses any key or optional timer reaches 00. 
 "
-for arg in "$@"; do
-  shift
+args="$0"
+for arg in "${args}"; do
   case "$arg" in
     '--quiet'    ) set -- "$@" '-q'   ;;
     '--timer'    ) set -- "$@" '-t'   ;;
