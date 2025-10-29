@@ -31,5 +31,4 @@ Default prompt is "Press any key to continue..."
     Output: $ [timer] Optional Prompt
             $ [ Your Response ]
             $
-    
-    [ seconds are converted to 00h:00m:00s style format ]
+    [format of time will be 00:00:00]
