@@ -27,7 +27,7 @@ Default prompt is "Press any key to continue..."
             $ Your Response
             $
     
-    Input:  $ ./pause -p \"Optional Prompt\" -r \"[ Your response ]\" -t <seconds>
+    Input:  $ ./pause -p "Optional Prompt" -r "[ Your response ]" -t <seconds>
     Output: $ [timer] Optional Prompt
             $ [ Your Response ]
             $
