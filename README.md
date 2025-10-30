@@ -1,6 +1,11 @@
 # pause.sh
+
+Current release: https://github.com/Grawmpy/pause.sh/releases
+
+Have .deb install file, standard binary that is in the .deb file and the bash script the previous two are based on.
 Pure bash pause script that interrupts a program until either the user presses any numeric or symbol key, or the 
-optional timer (-t, --timer) reaches 00. Interupt is indefinite and requires user input to continue without timer option.
+optional timer (-t, --timer) reaches 00. It works similarly to the one included with windows with a couple extra 
+options. The interupt is indefinite and requires user input to continue without timer option by pressing any key but SHIFT.
 Optional prompt text entry (-p, --prompt) and response text (-r, --response) entry allow for customization. 
 Quiet mode available for timer with no text output. Default is no timer and no response after keypress.
 Default prompt is "Press any key to continue..."
