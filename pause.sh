@@ -1,9 +1,9 @@
-#!/usr/bin/bash
+#!/bin/bash
 ###################################################################################################################################################
 ###################################################################################################################################################
 ###################################################################################################################################################
 #  pause.sh
-VERSION='5.0'
+VERSION='5.0.1'
 #  Author: Grawmpy
 
 #  Description: This script allows for the interruption of the current process until either the
@@ -25,75 +25,65 @@ VERSION='5.0'
 ###################################################################################################################################################
 ###################################################################################################################################################
 
-# Examples of use:
-
-# input: (no options)
-# $ ./pause.sh
-# output:
-# $ Press any key to continue...
-# $
-
-# input: (with timer)
-# $ ./pause.sh -t 10 [or, --timer 10]
-# output:
-# $ [10] Press any key to continue...
-# $
-
-# input: (with timer, custom prompt and custom response text)
-# $ ./pause.sh --timer 10 --prompt '*Finished process 1*' --response '** Continuing with process 2 **'
-#   or 
-# $ ./pause.sh -t 10 -p 'Finished process 1' -r '** Continuing with process 2 **'
-# output:
-# $ [10] Finished process 1
-# $ ** Continuing with process 2 **
-# $
-
 # Variables
 DEFAULT_PROMPT="Press any key to continue..."
-RETURN_TEXT=""
 SCRIPT="${0##*/}"
-COPYRIGHT="MIT License. Software is intended for free use."
-DESCRIPTION="A simple script that interrupts the current process."
+RETURN_TEXT=""
+TIMER=0
+QUIET_MODE=0
+COPYRIGHT="MIT License. Software is intended for free use only."
+DESCRIPTION="A simple script that interrupts the current process until user presses key or optional timer reaches 00."
 
 # Timer details
-declare -i TIMER=0
-declare -i QUIET_MODE=0
 
-error_exit() { # Error for any wrong input to the switches
-    echo "$1"
+
+error_exit() { 
+    # Error for any wrong input to the switches
+    printf "%s\n" "$1"
     exit 1
 }
 
 # Parse command-line arguments
 while getopts "qt:p:r:h" OPTION; do
     case "$OPTION" in
-        t)  if [[ -z $OPTARG ]]; then
-            error_exit "Timer value must be provided."
-        elif [[ ! $OPTARG =~ ^[0-9]+$ ]]; then
-            error_exit "Timer must be a non-negative integer."
-        else
-            TIMER="$OPTARG"
-        fi ;;
-        p) DEFAULT_PROMPT="${OPTARG}" ;;
-        r) RETURN_TEXT="${OPTARG}" ;;
-        h)
-            printf "%s v.%s\n%s\n%s\n\n" "$SCRIPT" "$VERSION" "$COPYRIGHT" "$DESCRIPTION"
+        t)  
+            if [ -z "$OPTARG" ]; then
+                error_exit "Timer value must be provided."
+            elif [[ ! "$OPTARG" =~ ^[0-9]+$ ]]; then
+                error_exit "Timer must be a non-negative integer."
+            else
+                TIMER="$OPTARG"
+            fi ;;
+        p) 
+            DEFAULT_PROMPT="${OPTARG}" ;;
+        r) 
+            RETURN_TEXT="${OPTARG}" ;;
+        h) 
+            printf "%s\n" "$SCRIPT" "$VERSION" "$COPYRIGHT" "$DESCRIPTION"
             printf "Usage:\n"
-            printf "%s [-p|--prompt] [-t|--timer] [-r|--response] [-h|--help] [-q|--quiet]\n\n" "$SCRIPT"
+            printf "[-p|--prompt] [-t|--timer] [-r|--response] [-h|--help] [-q|--quiet]\n\n"
             printf "    -p, --prompt    [ input required (string must be in quotes) ]\n"
             printf "    -t, --timer     [ number of seconds ]\n"
             printf "    -r, --response  [ requires text (string must be in quotes) ]\n"
             printf "    -h, --help      [ this information ]\n"
             printf "    -q, --quiet     [ quiet text, requires timer to be set. ]\n\n"
             printf "Examples:\n"
-            printf "Input:  $ %s\nOutput: $ %s\n" "$SCRIPT" "$DEFAULT_PROMPT"
-            printf "Input:  $ %s -t <seconds>\nOutput: $ [timer] %s\n" "$SCRIPT" "$DEFAULT_PROMPT"
+            printf "    Input: %s\n" "$SCRIPT"
+            printf "    Output: %s\n" "$DEFAULT_PROMPT"
+            printf "    Input: %s -t 10\n" "$SCRIPT"
+            printf "    Output: $ [10] %s\n" "$DEFAULT_PROMPT"
+            printf "    Input: %s -t 10 -p \"Hello World\"\n" "$SCRIPT"
+            printf "    Output: $ [10] Hello World\n"
+            printf "    Input: %s -t 10 -p \"Hello World\" -r \"And here we go.\"\n" "$SCRIPT"
+            printf "    Output: $ [10] Hello World\n"
+            printf "            $ And here we go.\n"
             exit 0 ;;
-        q) QUIET_MODE=1 ;;
-        ?) error_exit "Invalid option. Use -h for help." ;;
+        q) 
+            QUIET_MODE=1 ;;
+        ?) 
+            error_exit "Invalid option. Use -h for help." ;;
     esac
 done
-
 shift "$((OPTIND - 1))"
 
 # Function to display the remaining time in the desired format
@@ -102,7 +92,7 @@ display_time() {
     
     # Calculate time components
     local years=$(( total_seconds / 31536000 ))
-    local months=$(( (total_seconds % 31536000) / 2592000 ))  # Roughly 30 days per month
+    local months=$(( (total_seconds % 31536000) / 2592000 ))
     local days=$(( (total_seconds % 2592000) / 86400 ))
     local hours=$(( (total_seconds % 86400) / 3600 ))
     local minutes=$(( (total_seconds % 3600) / 60 ))
@@ -118,49 +108,90 @@ display_time() {
     printf '%02d]' "$seconds"
 }
 
-# Timer countdown function
-interrupt() {
+# Function for the quiet countdown
+quiet_countdown() {
     local LOOP_COUNT="$1"
-    local text_prompt="$2"
-    local return_prompt="$3"
+    local return_prompt="$2"
+
     local start_time=$(date +%s)  # Get the starting time
+    local elapsed_time=0
 
     # Loop for countdown
     while (( LOOP_COUNT > 0 )); do
-        local elapsed_time=$(( $(date +%s) - start_time ))  # Calculate elapsed time
+        # Update elapsed time
+        elapsed_time=$(( $(date +%s) - start_time ))
 
-        # Update display if one second has passed
+        # Check if a second has passed
         if (( elapsed_time >= 1 )); then
             LOOP_COUNT=$((LOOP_COUNT - 1))  # Decrement if a second has elapsed
             start_time=$(date +%s)  # Reset the start time
         fi
 
-        printf '\r\033[K'  # Clear the line 
-        display_time "$LOOP_COUNT"  # Display formatted time
-        printf ' %s' "$text_prompt"  # Display the prompt
-
-        # Check for key press
-        read -r -t 0.1 -s key  # Wait for key press for a short interval
+        # Check for key press without displaying anything
+        read -r -t 0.1 -s key
         if [[ $? -eq 0 ]]; then
-            LOOP_COUNT=0
+            LOOP_COUNT=0  # Exit countdown if a key is pressed
         fi
     done
-    printf '\n'  # Move to a new line
 
+    # After countdown is finished
+    printf '\n'   # Move to a new line
     if [[ -n $return_prompt ]]; then 
-        printf '%s\n' "$return_prompt"
+        printf '%s\n' "$return_prompt"  # Print the return prompt if provided
     fi
+}
+
+interrupt() {
+    local LOOP_COUNT="$1"
+    local text_prompt="$2"
+    local return_prompt="$3"
+    local quiet_mode=$QUIET_MODE
+    local start_time=$(date +%s)  # Get the starting time
+    local elapsed_time=0
+
+    while (( LOOP_COUNT > 0 )); do
+        # Wait for a key press or use sleep for a short interval
+        read -r -t 0.1 -s key
+        
+        # Check if a key is pressed
+        if [[ $? -eq 0 ]]; then
+            LOOP_COUNT=0
+            break
+        fi
+        
+        # Update elapsed time
+        elapsed_time=$(( $(date +%s) - start_time ))
+        
+        # Only update once per second
+        if (( elapsed_time >= 1 )); then
+            LOOP_COUNT=$((LOOP_COUNT - 1))  # Decrement
+            start_time=$(date +%s)  # Reset the start time
+        fi
+    if [ $quiet_mode -eq 0 ] ; then 
+        printf '\r\033[K'  # Clear the line
+        display_time "$LOOP_COUNT"  # Display formatted time
+        printf ' %s' "$text_prompt"  # Display the prompt
+    fi
+    done
+    
+    printf '\n'  # Move to a new line
+    [[ -n $return_prompt ]] && printf '%s\n' "$return_prompt"
 }
 
 # Main logic based on quiet and timer flags
 if [[ $QUIET_MODE -eq 0 && $TIMER -eq 0 ]]; then
     read -rsn1 -p "$DEFAULT_PROMPT" 
-    echo
+    printf "\n\r"
     exit 0
 elif [[ $QUIET_MODE -eq 0 && $TIMER -gt 0 ]]; then
-    interrupt "$TIMER" "$DEFAULT_PROMPT" "$RETURN_TEXT"
+    interrupt "$TIMER" "$DEFAULT_PROMPT"
+    [[ -n $RETURN_TEXT ]] && printf '%s\n' "$RETURN_TEXT"  # Print the return text if it exists
+    printf "\n\r"
+    exit 0
+elif [[ $QUIET_MODE -eq 1 && $TIMER -gt 0 ]]; then
+    quiet_countdown "$TIMER" "$RETURN_TEXT"  # Call quiet countdown function
     exit 0
 elif [[ $QUIET_MODE -eq 1 && $TIMER -eq 0 ]]; then
-    echo "Timer must be set." 
+    printf "Timer must be set.\n\r" 
     exit 1
 fi
