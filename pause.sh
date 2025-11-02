@@ -43,6 +43,26 @@ error_exit() {
     exit 1
 }
 
+sanitize_input() {
+    local input="$1"
+    # Remove any characters that are not alphanumeric, space, or valid punctuation.
+    # Ensure ranges and characters are in proper order.
+    echo "$input" | tr -cd '[:alnum:][:blank:]_,.;:!' 
+}
+remove_escape_codes() {
+    local input="$1"
+    # Remove escape codes (like color codes)
+    echo "$input" | sed 's/\x1b\[[0-9;]*m//g'
+}
+
+sanitize_and_escape() {
+    local sanitized
+    sanitized=$(sanitize_input "$1")
+    sanitized=$(remove_escape_codes "$sanitized")
+    echo "$sanitized"
+}
+
+
 # Parse command-line arguments
 while getopts "qt:p:r:h" OPTION; do
     case "$OPTION" in
@@ -55,9 +75,9 @@ while getopts "qt:p:r:h" OPTION; do
                 TIMER="$OPTARG"
             fi ;;
         p) 
-            DEFAULT_PROMPT="${OPTARG}" ;;
+            DEFAULT_PROMPT=$(sanitize_and_escape "$OPTARG") ;;
         r) 
-            RETURN_TEXT="${OPTARG}" ;;
+            RETURN_TEXT=$(sanitize_and_escape "$OPTARG") ;;
         h) 
             printf "%s\n" "$SCRIPT" "$VERSION" "$COPYRIGHT" "$DESCRIPTION"
             printf "Usage:\n"
