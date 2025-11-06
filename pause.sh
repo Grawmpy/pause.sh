@@ -3,7 +3,7 @@
 ###################################################################################################################################################
 ###################################################################################################################################################
 #  pause.sh
-VERSION='5.0.1'
+VERSION='5.1'
 #  Author: Grawmpy
 
 #  Description: This script allows for the interruption of the current process until either the
@@ -35,37 +35,176 @@ COPYRIGHT="MIT License. Software is intended for free use only."
 DESCRIPTION="A simple script that interrupts the current process until user presses key or optional timer reaches 00."
 
 # Timer details
-
-
 error_exit() { 
-    # Error for any wrong input to the switches
     printf "%s\n" "$1"
     exit 1
 }
-
-sanitize_input() {
+# ... (only_alphanum, remove_escape_codes, sanitize_text functions remain unchanged) ...
+only_alphanum() {
     local input="$1"
-    # Remove any characters that are not alphanumeric, space, or valid punctuation.
-    # Ensure ranges and characters are in proper order.
-    echo "$input" | tr -cd '[:alnum:][:blank:]_,.;:!' 
+    echo "$input" | tr -cd '[:alnum:][:cntrl:][:blank:]_,.;:!' 
 }
 remove_escape_codes() {
     local input="$1"
-    # Remove escape codes (like color codes)
-    echo "$input" | sed 's/\x1b\[[0-9;]*m//g'
+    echo "$input" | sed 's/\\r\\n//g; s/\x1b\[[0-9;]*[JK]//g'
 }
-
-sanitize_and_escape() {
+sanitize_text() {
     local sanitized
-    sanitized=$(sanitize_input "$1")
+    local input
+    input=${1:-}
+    sanitized=$(only_alphanum "$input")
     sanitized=$(remove_escape_codes "$sanitized")
     echo "$sanitized"
 }
 
 
-# Parse command-line arguments
+# Parse command-line arguments (remains unchanged)
 while getopts "qt:p:r:h" OPTION; do
     case "$OPTION" in
+        t)  
+            if [ -z "$OPTARG" ]; then
+                error_exit "Timer value must be provided."
+            elif [[ ! "$OPTARG" =~ ^[0-9]+$ ]]; then
+                error_exit "Timer must be a non-negative integer."
+            else
+                TIMER="$OPTARG"
+            fi ;;
+        p) 
+            DEFAULT_PROMPT=$(sanitize_text "$OPTARG") ;;
+        r) 
+            RETURN_TEXT=$(sanitize_text "$OPTARG") ;;
+        h) 
+            printf "%s\n" "$SCRIPT" "$VERSION" "$COPYRIGHT" "$DESCRIPTION"
+            printf "Usage:\n"
+            printf "[-p|--prompt] [-t|--timer] [-r|--response] [-h|--help] [-q|--quiet]\n\n"
+            printf "    -p, --prompt    [ input required (string must be in quotes) ]\n"
+            printf "    -t, --timer     [ number of seconds ]\n"
+            printf "    -r, --response  [ requires text (string must be in quotes) ]\n"
+            printf "    -h, --help      [ this information ]\n"
+            printf "    -q, --quiet     [ quiet text, requires timer to be set. ]\n\n"
+            printf "Examples:\n"
+            printf "    Input: %s\n" "$SCRIPT"
+            printf "    Output: %s\n" "$DEFAULT_PROMPT"
+            printf "    Input: %s -t 10\n" "$SCRIPT"
+            printf "    Output: $ [10] %s\n" "$DEFAULT_PROMPT"
+            printf "    Input: %s -t 10 -p \"Hello World\"\n" "$SCRIPT"
+            printf "    Output: $ [10] Hello World\n"
+            printf "    Input: %s -t 10 -p \"Hello World\" -r \"And here we go.\"\n" "$SCRIPT"
+            printf "    Output: $ [10] Hello World\n"
+            printf "            $ And here we go.\n"
+            exit 0 ;;
+        q) 
+            QUIET_MODE=1 ;;
+        ?) 
+            error_exit "Invalid option. Use -h for help." ;;
+    esac
+done
+shift "$((OPTIND - 1))"
+
+# Function to display the remaining time in the desired format (remains unchanged)
+display_time() {
+    local total_seconds="$1"
+    printf '['
+    [[ $years -gt 0 ]] && printf '%02dyr:' "$years"
+    [[ $months -gt 0 ]] && printf '%02dmn:' "$months"
+    [[ $days -gt 0 ]] && printf '%02ddy:' "$days"
+    [[ $hours -gt 0 ]] && printf '%02d:' "$hours"
+    [[ $minutes -gt 0 ]] && printf '%02d:' "$minutes"
+    printf '%02d]' "$seconds"
+}
+
+# Function for the quiet countdown (MODIFIED TO ECHO KEY)
+quiet_countdown() {
+    local LOOP_COUNT="$1"
+    local return_prompt="$2"
+    local start_time=$(date +%s)
+    local elapsed_time=0
+    local key="" # Ensure 'key' variable is local to function scope
+
+    while (( LOOP_COUNT > 0 )); do
+        elapsed_time=$(( $(date +%s) - start_time ))
+        if (( elapsed_time >= 1 )); then
+            LOOP_COUNT=$((LOOP_COUNT - 1))
+            start_time=$(date +%s)
+        fi
+        read -rn1 -t 0.1 -s key
+        if [[ $? -eq 0 ]]; then
+            LOOP_COUNT=0
+        fi
+    done
+
+    printf '\n'
+    if [[ -n $return_prompt ]]; then 
+        printf '%s\n' "$return_prompt"
+    fi
+    # ADDED: Echo the keypress value
+    echo "${key}" 
+}
+
+# Interrupt function (MODIFIED TO ECHO KEY)
+interrupt() {
+    local LOOP_COUNT="$1"
+    local text_prompt="$2"
+    local return_prompt="$3"
+    local quiet_mode=$QUIET_MODE
+    local start_time=$(date +%s)
+    local elapsed_time=0
+    local key="" # Ensure 'key' variable is local to function scope
+
+    while (( LOOP_COUNT > 0 )); do
+        read -rn1 -t 0.1 -s key # Added -r and -n1 for robustness
+        if [[ $? -eq 0 ]]; then
+            LOOP_COUNT=0
+            break
+        fi
+        elapsed_time=$(( $(date +%s) - start_time ))
+        if (( elapsed_time >= 1 )); then
+            LOOP_COUNT=$((LOOP_COUNT - 1))
+            start_time=$(date +%s)
+        fi
+        if [ $quiet_mode -eq 0 ] ; then 
+            printf '\r\033[K'
+            display_time "$LOOP_COUNT"
+            printf ' %s' "$text_prompt"
+        fi
+    done
+    
+    # Clear the last line before final output
+    printf '\r\033[K' 
+    printf '\n'
+    [[ -n $return_prompt ]] && printf '%s\n' "$return_prompt"
+    # ADDED: Echo the keypress value
+    echo "${key}"
+}
+
+
+# Main logic based on quiet and timer flags (MODIFIED TO CAPTURE & ECHO)
+
+CAPTURED_KEY="" # Variable to store the final keypress from any scenario
+
+if [[ $QUIET_MODE -eq 0 && $TIMER -eq 0 ]]; then
+    # Case 1: Interactive mode, indefinite wait
+    read -sn1 -p "$DEFAULT_PROMPT" key
+    CAPTURED_KEY="$key"
+    printf "\n"
+elif [[ $QUIET_MODE -eq 0 && $TIMER -gt 0 ]]; then
+    # Case 2: Interactive mode with timer (Capture output)
+    CAPTURED_KEY=$(interrupt "$TIMER" "$DEFAULT_PROMPT")
+elif [[ $QUIET_MODE -eq 1 && $TIMER -gt 0 ]]; then
+    # Case 3: Quiet mode with timer (Capture output)
+    CAPTURED_KEY=$(quiet_countdown "$TIMER" "$RETURN_TEXT")
+elif [[ $QUIET_MODE -eq 1 && $TIMER -eq 0 ]]; then
+    # Case 4: Error condition
+    printf "Timer must be set.\n\r" 
+    exit 1
+fi
+
+# !!! FINAL STEP: Echo the captured key value as the *entire script's* output !!!
+echo "$CAPTURED_KEY"
+
+# Exit with a standard success code now
+exit 0
+
         t)  
             if [ -z "$OPTARG" ]; then
                 error_exit "Timer value must be provided."
