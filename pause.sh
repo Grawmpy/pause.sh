@@ -1,10 +1,10 @@
-#!/bin/bash
+#!/usr/bin/env bash
 ###################################################################################################################################################
 ###################################################################################################################################################
 ###################################################################################################################################################
 #  pause.sh
 VERSION='5.0.1'
-#  Author: Grawmpy <grawmpy@gmail.com>
+#  Author: Grawmpy
 
 #  Description: This script allows for the interruption of the current process until either the
 #  timer reaches 00 or the user presses any key. If no timer is used, the process
@@ -36,34 +36,40 @@ DESCRIPTION="A simple script that interrupts the current process until user pres
 
 # Timer details
 
-
-error_exit() { 
-    # Error for any wrong input to the switches
-    printf "%s\n" "$1"
-    exit 1
-}
-
-only_alphanum() {
+sanitize() {
     local input="$1"
-    # Remove any characters that are not alphanumeric, space, or valid punctuation.
-    # Ensure ranges and characters are in proper order.
-    echo "$input" | tr -cd '[:alnum:][:cntrl:][:blank:]_,.;:!' 
-}
-remove_escape_codes() {
-    local input="$1"
-    # Remove escape codes (like color codes)
-    echo "$input" | sed 's/\\r\\n//g; s/\x1b\[[0-9;]*[JK]//g'
+    # This Bash parameter expansion removes control characters (ASCII 0-31 and 127)
+    # as well as the ESC character itself (ASCII 27).
+    local cleaned="${input//[$'\x00'-$'\x1f'$'\x7f']/}"
+    printf "%s" "${cleaned}"
 }
 
-sanitize_text() {
-    local sanitized
-    local input
-    input=${1:-}
-    sanitized=$(only_alphanum "$input")
-    sanitized=$(remove_escape_codes "$sanitized")
-    echo "$sanitized"
-}
+# Declare an associative array to store the mapping
+declare -A OPT_MAP
+OPT_MAP["--prompt"]="-p"
+OPT_MAP["--timer"]="-t"
+OPT_MAP["--response"]="-r"
+OPT_MAP["--help"]="-h"
+OPT_MAP["--quiet"]="-q"
 
+ARGS=()
+
+while [[ "$#" -gt 0 ]]; do
+    CURRENT_ARG="$1"
+    
+    # Check if the current argument exists as a key in our map
+    if [[ -n "${OPT_MAP[$CURRENT_ARG]}" ]]; then
+        # If yes, add the mapped short value to our argument list
+        ARGS+=("${OPT_MAP[$CURRENT_ARG]}")
+    else
+        # Otherwise, keep the original argument (e.g., a value or short flag)
+        ARGS+=("$CURRENT_ARG")
+    fi
+    
+    shift
+done
+
+set -- "${ARGS[@]}"
 
 # Parse command-line arguments
 while getopts "qt:p:r:h" OPTION; do
@@ -77,9 +83,9 @@ while getopts "qt:p:r:h" OPTION; do
                 TIMER="$OPTARG"
             fi ;;
         p) 
-            DEFAULT_PROMPT=$(sanitize_text "$OPTARG") ;;
+            DEFAULT_PROMPT=$(sanitize "$OPTARG") ;;
         r) 
-            RETURN_TEXT=$(sanitize_text "$OPTARG") ;;
+            RETURN_TEXT=$(sanitize "$OPTARG") ;;
         h) 
             printf "%s\n" "$SCRIPT" "$VERSION" "$COPYRIGHT" "$DESCRIPTION"
             printf "Usage:\n"
@@ -89,6 +95,7 @@ while getopts "qt:p:r:h" OPTION; do
             printf "    -r, --response  [ requires text (string must be in quotes) ]\n"
             printf "    -h, --help      [ this information ]\n"
             printf "    -q, --quiet     [ quiet text, requires timer to be set. ]\n\n"
+            printf ''
             printf "Examples:\n"
             printf "    Input: %s\n" "$SCRIPT"
             printf "    Output: %s\n" "$DEFAULT_PROMPT"
@@ -134,8 +141,9 @@ display_time() {
 quiet_countdown() {
     local LOOP_COUNT="$1"
     local return_prompt="$2"
-
-    local start_time=$(date +%s)  # Get the starting time
+    local status
+    local start_time
+    start_time=$(date +%s)  # Get the starting time
     local elapsed_time=0
 
     # Loop for countdown
@@ -150,8 +158,9 @@ quiet_countdown() {
         fi
 
         # Check for key press without displaying anything
-        read -rn1 -t 0.1 -s key
-        if [[ $? -eq 0 ]]; then
+        read -r -t 0.1
+        status=$?
+        if [[ ${status} -eq 0 ]]; then
             LOOP_COUNT=0  # Exit countdown if a key is pressed
         fi
     done
@@ -168,49 +177,59 @@ interrupt() {
     local text_prompt="$2"
     local return_prompt="$3"
     local quiet_mode=$QUIET_MODE
-    local start_time=$(date +%s)  # Get the starting time
-    local elapsed_time=0
+    local start_time
+    start_time=$(date +%s)
+    
+    if [ "$quiet_mode" -eq 0 ]; then
+        printf "\e[?25l" # hide cursor
+        # Print initial line once
+        printf '\r'  # Go to column 0
+        display_time "$LOOP_COUNT"
+        printf ' %s' "$text_prompt"
+    fi
 
     while (( LOOP_COUNT > 0 )); do
-        # Wait for a key press or use sleep for a short interval
-        read -t 0.1 -s key
+        read -r -t 0.1; status=$?
+        if [[ ${status} -eq 0 ]]; then LOOP_COUNT=0; break; fi
         
-        # Check if a key is pressed
-        if [[ $? -eq 0 ]]; then
-            LOOP_COUNT=0
-            break
+        if (( $(date +%s) - start_time >= 1 )); then
+            LOOP_COUNT=$((LOOP_COUNT - 1))
+            start_time=$(date +%s)
+            
+            if [ "$quiet_mode" -eq 0 ]; then 
+                # --- The Non-Blinking Update Idea ---
+                # 1. Move cursor back to column 0
+                # 2. Re-display the entire line (overwriting the old one)
+                # This is the smoothest way without tracking previous string length.
+                printf '\r'
+                display_time "$LOOP_COUNT"
+                printf ' %s' "$text_prompt"
+            fi
         fi
-        
-        # Update elapsed time
-        elapsed_time=$(( $(date +%s) - start_time ))
-        
-        # Only update once per second
-        if (( elapsed_time >= 1 )); then
-            LOOP_COUNT=$((LOOP_COUNT - 1))  # Decrement
-            start_time=$(date +%s)  # Reset the start time
-        fi
-    if [ $quiet_mode -eq 0 ] ; then 
-        printf '\r\033[K'  # Clear the line
-        display_time "$LOOP_COUNT"  # Display formatted time
-        printf ' %s' "$text_prompt"  # Display the prompt
-    fi
     done
     
-    printf '\n'  # Move to a new line
+    if [ "$quiet_mode" -eq 0 ]; then
+        printf "\e[?25h" # show cursor
+    fi
+    printf '\n'
     [[ -n $return_prompt ]] && printf '%s\n' "$return_prompt"
 }
 
+
 # Main logic based on quiet and timer flags
 if [[ $QUIET_MODE -eq 0 && $TIMER -eq 0 ]]; then
-    read -sn1 -p "$DEFAULT_PROMPT" 
+    read -rsn1 -p "$DEFAULT_PROMPT" 
     printf "\n\r"
     exit 0
 elif [[ $QUIET_MODE -eq 0 && $TIMER -gt 0 ]]; then
+    printf "\e[?25l" # hide cursor
     interrupt "$TIMER" "$DEFAULT_PROMPT"
+    printf "\e[?25h" # return/show cursor
     [[ -n $RETURN_TEXT ]] && printf '%s\n' "$RETURN_TEXT"  # Print the return text if it exists
     printf "\n\r"
     exit 0
 elif [[ $QUIET_MODE -eq 1 && $TIMER -gt 0 ]]; then
+    printf "\e[?25h" # return/show cursor
     quiet_countdown "$TIMER" "$RETURN_TEXT"  # Call quiet countdown function
     exit 0
 elif [[ $QUIET_MODE -eq 1 && $TIMER -eq 0 ]]; then
