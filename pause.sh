@@ -4,7 +4,7 @@
 ###################################################################################################################################################
 #  pause.sh
 VERSION='5.0.1'
-#  Author: Grawmpy
+#  Author: Grawmpy (CSPhelps) <grawmpy@gmail.com>
 
 #  Description: This script allows for the interruption of the current process until either the
 #  timer reaches 00 or the user presses any key. If no timer is used, the process
@@ -13,6 +13,41 @@ VERSION='5.0.1'
 #  the current process without user interaction. The order of the variables can be passed 
 #  to the script in any order, doesn't matter, they are processed as they are read and 
 #  the result is stored until applied to the final output.
+#
+#  I am an old school DOS user starting in college in 1983 as a Computer Science major. 
+#  From the very early days, "pause" has been a simple function that has always been a
+#  part of the windows commands that is a minute feature, but can be very useful at times. The options
+#  I have added as options are ones I would have liked to have seen included and easily accessible
+#  from a simple option passed to the command. This is my best attempt to add those same features
+#  I felt were major deficiencies and should have been added to the pause program. I know some would 
+#  argue that this script is a bit superfluous and not really needed. In a way you're right, you can
+#  add a few lines to do what all I do here but why do all that when you can simple use the command "pause" and 
+#  and have built-in options to customize it without having to the coding yourself.
+
+#  Command: pause
+#  Options: [-p|--prompt] [-r|--response] [-t|--timer] [-q|--quiet] [-h|--help]
+
+#  [--prompt, -p] (prompt text must be inside double quotes, example: pause -p "Hello World", or pause --prompt "Hello World")
+#  [--response, -r ] (response text must be inside double quotes)
+#  [--timer, -t ] (Must be in total seconds. Example: pause -t 30, or pause --timer 30
+#  [--quiet, -q ] (No prompt, just cursor blink. Timer must be set for use. Example: pause -q -t 10, or pause --quiet --timer 10)
+#  You can combine the quiet mode options, such as: pause -qt10
+#  Order of options doees not matter they are processed as they are encountered for later use in the main logic.
+
+#  1. I wanted the script to have a way to change the default prompt to a custom text
+#     appropriate for the need of the user. 
+#  2. I wanted a way to use a custom response, if needed, echoed after the process continued. 
+#  3. I wanted a quiet countdown that could pause a process for a set time to wait for whatever reason with no prompt.
+#  4. I wanted an easy way to use a countdown timer. This is not meant to be super accurate but I tried to keep the
+#     lag time to a minimum. It does have a little lag time so over time it will lose accuracy. The extended time
+#     separation was simply for fun. I added the countdown in years, months, days, and the hours and minute displayed as [00:00].
+#     Each section disappears as the countdown reaches zero. Format: [00yr:00mn:00dy:00:00]. Final will be [00].
+#  5. I wanted to make sure that only an alphanumeric key the user pressed closed the pause script and continued the process.
+#     I tried to eliminate the function, arrow, shift, ctrl or alt keys being recognized to continue the process. 
+#     I wanted it to be functional for use in passing on the character pressed to be used anywhere the capture of 
+#     a single alphanumeric key press is needed.
+#  6. I wanted to use as pure bash as possible to allow for maximum usage and broad compatibility .
+#  
 
 #  Copyright: THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
 #  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
