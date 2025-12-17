@@ -29,12 +29,15 @@ VERSION='5.0.1'
 #  pause ( without any options)
 #  $ Press any key to continue...
 #
-#  Options include:
+#  Options include: (spaces between option and data are ignored)
 #  [--prompt, -p] (prompt text must be inside double quotes, example: pause -p "Hello World", or pause --prompt "Hello World")
 #  [--response, -r ] (response text must be inside double quotes)
 #  [--timer, -t ] (Must be in total seconds. Example: pause -t 30, or pause --timer 30
 #  [--quiet, -q ] (No prompt, just cursor blink. Timer must be set for use. Example: pause -q -t 10, or pause --quiet --timer 10)
-#  You can combine the quiet mode options, such as: pause -qt10
+#                  You can combine the quiet mode options, such as: pause -qt10
+#  [--echo, -e ] (Echoes the key pressed to use in command substitution to allow for use in menus, case statements, etc.)
+#                  Command substitution works to populate a variable 
+
 #  Order of options does not matter as they are processed when they are encountered by getopts and used later in the main logic.
 
 #  1. I wanted the script to have a way to change the default prompt to a custom text to accommodate for the needs of the user. 
@@ -135,6 +138,7 @@ while getopts "eqt:p:r:h" OPTION; do
             printf "    -r, --response  [ requires text (string must be in quotes) ]\n"
             printf "    -h, --help      [ this information ]\n"
             printf "    -q, --quiet     [ quiet text, requires timer to be set. ]\n\n"
+            printf "    -e, --echo      [ echoes the keypress to stdout ]\n\n"
             printf ''
             printf "Examples:\n"
             printf "    Input: %s\n" "${SCRIPT}"
