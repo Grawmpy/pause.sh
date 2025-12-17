@@ -66,7 +66,7 @@ SCRIPT="${0##*/}"
 RETURN_TEXT=""
 TIMER=0
 QUIET_MODE=0
-COPYRIGHT="MIT License. Software is intended for free use only."
+COPYRIGHT="GPL3.0 License. Software is intended for free use only."
 DESCRIPTION="A simple script that interrupts the current process until user presses key or optional timer reaches 00."
 
 # Timer details
