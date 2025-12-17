@@ -17,31 +17,34 @@ VERSION='5.0.1'
 #  I am an old school DOS user starting in college in 1983 as a Computer Science major. 
 #  From the very early days, "pause" has been a simple function that has always been a
 #  part of the windows commands that is a minute feature, but can be very useful at times. The options
-#  I have added as options are ones I would have liked to have seen included and easily accessible
+#  I've added are ones I would have liked to have seen included and easily accessible
 #  from a simple option passed to the command. This is my best attempt to add those same features
 #  I felt were major deficiencies and should have been added to the pause program. I know some would 
 #  argue that this script is a bit superfluous and not really needed. In a way you're right, you can
 #  add a few lines to do what all I do here but why do all that when you can simple use the command "pause" and 
-#  and have built-in options to customize it without having to the coding yourself.
+#  and have built-in options to customize it without having to do the coding yourself.
 
 #  Command: pause
 #  Options: [-p|--prompt] [-r|--response] [-t|--timer] [-q|--quiet] [-h|--help]
-
+#  pause ( without any options)
+#  $ Press any key to continue...
+#
+#  Options include (No spaces needed between options and values):
 #  [--prompt, -p] (prompt text must be inside double quotes, example: pause -p "Hello World", or pause --prompt "Hello World")
-#  [--response, -r ] (response text must be inside double quotes)
-#  [--timer, -t ] (Must be in total seconds. Example: pause -t 30, or pause --timer 30
-#  [--quiet, -q ] (No prompt, just cursor blink. Timer must be set for use. Example: pause -q -t 10, or pause --quiet --timer 10)
-#  You can combine the quiet mode options, such as: pause -qt10
-#  Order of options doees not matter they are processed as they are encountered for later use in the main logic.
+#  [--response, -r ] (response text must be inside double quotes, example: pause -r "Continuing...", or pause --response "Continuing...")
+#  [--timer, -t ] (Must be in total seconds. Example: pause -t 30, or pause --timer 30)
+#  [--quiet, -q ] (No prompt, just cursor blink. Timer required to be set for use. Example: pause -q -t 10, or pause --quiet --timer 10, or pause -qt10)
+#  Order of options does not matter as they are processed when they are encountered and used later in the main logic.
 
-#  1. I wanted the script to have a way to change the default prompt to a custom text
-#     appropriate for the need of the user. 
+#  1. I wanted the script to have a way to change the default prompt to a custom text to accommodate for the needs of the user. 
 #  2. I wanted a way to use a custom response, if needed, echoed after the process continued. 
-#  3. I wanted a quiet countdown that could pause a process for a set time to wait for whatever reason with no prompt.
+#  3. I wanted a quiet countdown that could pause a process for a set time to wait for whatever reason with no prompt (interruptable with keypress).
+#     This one I mostly use for forcing a pause in the program to slow things down without user interaction. Sleep is a similar function.
 #  4. I wanted an easy way to use a countdown timer. This is not meant to be super accurate but I tried to keep the
 #     lag time to a minimum. It does have a little lag time so over time it will lose accuracy. The extended time
-#     separation was simply for fun. I added the countdown in years, months, days, and the hours and minute displayed as [00:00].
-#     Each section disappears as the countdown reaches zero. Format: [00yr:00mn:00dy:00:00]. Final will be [00].
+#     separation was simply for fun. I added the countdown in years, months, days, and finally the hours, minute and seconds displayed as [00:00:00].
+#     Each section disappears as the countdown reaches zero. Format: [YEAR:MONTH:DAY:HOUR:MINUTE:SECOND]. 
+#     Format for display is: [01yr:01mn:01dy:01:01:00], each section disappearing at 00 until only the [00] remains.
 #  5. I wanted to make sure that only an alphanumeric key the user pressed closed the pause script and continued the process.
 #     I tried to eliminate the function, arrow, shift, ctrl or alt keys being recognized to continue the process. 
 #     I wanted it to be functional for use in passing on the character pressed to be used anywhere the capture of 
@@ -55,7 +58,7 @@ VERSION='5.0.1'
 #  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
 #  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE 
-#  SOFTWARE. 
+#  SOFTWARE. GPL.3.0
 ###################################################################################################################################################
 ###################################################################################################################################################
 ###################################################################################################################################################
@@ -67,7 +70,7 @@ RETURN_TEXT=""
 TIMER=0
 QUIET_MODE=0
 COPYRIGHT="GPL3.0 License. Software is intended for free use only."
-DESCRIPTION="A simple script that interrupts the current process until user presses key or optional timer reaches 00."
+DESCRIPTION="A simple script that interrupts the current process until user presses key or optional timer reaches 00. Format is [HH:MM:SS"
 
 # Timer details
 
@@ -131,7 +134,7 @@ while getopts "qt:p:r:h" OPTION; do
             printf "    -h, --help      [ this information ]\n"
             printf "    -q, --quiet     [ quiet text, requires timer to be set. ]\n\n"
             printf ''
-            printf "Examples:\n"
+            printf "Examples:\n (Timer will count down to zero)"
             printf "    Input: %s\n" "$SCRIPT"
             printf "    Output: %s\n" "$DEFAULT_PROMPT"
             printf "    Input: %s -t 10\n" "$SCRIPT"
@@ -150,7 +153,7 @@ while getopts "qt:p:r:h" OPTION; do
 done
 shift "$((OPTIND - 1))"
 
-# Function to display the remaining time in the desired format
+# Function to display the countdown timer in the desired format
 display_time() {
     local total_seconds="$1"
     
@@ -165,10 +168,10 @@ display_time() {
     # Output format
     printf '['
     [[ $years -gt 0 ]] && printf '%02dyr:' "$years"
-    [[ $months -gt 0 ]] && printf '%02dmn:' "$months"
-    [[ $days -gt 0 ]] && printf '%02ddy:' "$days"
-    [[ $hours -gt 0 ]] && printf '%02d:' "$hours"
-    [[ $minutes -gt 0 ]] && printf '%02d:' "$minutes"
+    [[ $months -gt 0 || $years -gt 0 ]] && printf '%02dmn:' "$months"
+    [[ $days -gt 0 || $months -gt 0 ]] && printf '%02ddy:' "$days"
+    [[ $hours -gt 0 || $days -gt 0 ]] && printf '%02d:' "$hours"
+    [[ $minutes -gt 0 || $hours -gt 0 ]] && printf '%02d:' "$minutes"
     printf '%02d]' "$seconds"
 }
 
@@ -177,8 +180,7 @@ quiet_countdown() {
     local LOOP_COUNT="$1"
     local return_prompt="$2"
     local status
-    local start_time
-    start_time=$(date +%s)  # Get the starting time
+    local start_time=$(date +%s)  # Get the starting time
     local elapsed_time=0
 
     # Loop for countdown
@@ -193,81 +195,72 @@ quiet_countdown() {
         fi
 
         # Check for key press without displaying anything
-        read -r -t 0.1
-        status=$?
+        read -r -t 0.1 ; status=$?
         if [[ ${status} -eq 0 ]]; then
             LOOP_COUNT=0  # Exit countdown if a key is pressed
         fi
     done
 
     # After countdown is finished
-    printf '\n'   # Move to a new line
+    printf '\r'   # return to beginning of line
     if [[ -n $return_prompt ]]; then 
         printf '%s\n' "$return_prompt"  # Print the return prompt if provided
     fi
 }
 
 interrupt() {
-    local LOOP_COUNT="$1"
-    local text_prompt="$2"
-    local return_prompt="$3"
-    local quiet_mode=$QUIET_MODE
-    local start_time
-    start_time=$(date +%s)
-    
-    if [ "$quiet_mode" -eq 0 ]; then
-        printf "\e[?25l" # hide cursor
-        # Print initial line once
-        printf '\r'  # Go to column 0
-        display_time "$LOOP_COUNT"
-        printf ' %s' "$text_prompt"
-    fi
+    local LOOP_COUNT="$1" # Timer count in number of seconds
+    local text_prompt="$2" # Prompt value
+    local return_prompt="$3" # Response value
+    local quiet_mode=${QUIET_MODE} # Quiet mode: (1|0)
+    local start_time=$(date +%s) # Get the seconds in date for comparison
+
+    printf "\e[?25l" # hide cursor
+    # Print initial line once
+    printf '\r'  # Go to column 0
+    display_time "$LOOP_COUNT" # Start the countdown timer
+    printf ' %s' "$text_prompt" # write the beginning value to the screen
 
     while (( LOOP_COUNT > 0 )); do
-        read -r -t 0.1; status=$?
-        if [[ ${status} -eq 0 ]]; then LOOP_COUNT=0; break; fi
+        read -r -t 0.1 ; status=$? # check for keypress but don't write to tty
+        if [[ ${status} -eq 0 ]]; then LOOP_COUNT=0; break; fi # if keypress detected break from script
         
+        # Compare time to make sure second has passed. More accurate than simple 1 second delay.
         if (( $(date +%s) - start_time >= 1 )); then
             LOOP_COUNT=$((LOOP_COUNT - 1))
             start_time=$(date +%s)
-            
-            if [ "$quiet_mode" -eq 0 ]; then 
-                # --- The Non-Blinking Update Idea ---
-                # 1. Move cursor back to column 0
-                # 2. Re-display the entire line (overwriting the old one)
-                # This is the smoothest way without tracking previous string length.
-                printf '\r'
-                display_time "$LOOP_COUNT"
-                printf ' %s' "$text_prompt"
-            fi
+            printf '\r'
+            display_time "$LOOP_COUNT"
+            printf ' %s' "$text_prompt"
         fi
     done
     
-    if [ "$quiet_mode" -eq 0 ]; then
-        printf "\e[?25h" # show cursor
-    fi
-    printf '\n'
-    [[ -n $return_prompt ]] && printf '%s\n' "$return_prompt"
+    #printf "\e[?25h\n" # show cursor, line return
+    printf "\r\033[K" # Return cursor and clear the line to the end
+    [[ -n $return_prompt ]] && printf '%s\r' "$return_prompt"
 }
 
 
 # Main logic based on quiet and timer flags
+# quiet=no, timer=no
 if [[ $QUIET_MODE -eq 0 && $TIMER -eq 0 ]]; then
     read -rsn1 -p "$DEFAULT_PROMPT" 
-    printf "\n\r"
+    printf "\n"
     exit 0
+# quiet=no, timer=yes
 elif [[ $QUIET_MODE -eq 0 && $TIMER -gt 0 ]]; then
     printf "\e[?25l" # hide cursor
     interrupt "$TIMER" "$DEFAULT_PROMPT"
     printf "\e[?25h" # return/show cursor
     [[ -n $RETURN_TEXT ]] && printf '%s\n' "$RETURN_TEXT"  # Print the return text if it exists
-    printf "\n\r"
     exit 0
+# quiet=yes, timer=no
+elif [[ $QUIET_MODE -eq 1 && $TIMER -eq 0 ]]; then
+    printf "Timer must be set.\n" 
+    exit 1
+# quiet=yes, timer=yes
 elif [[ $QUIET_MODE -eq 1 && $TIMER -gt 0 ]]; then
     printf "\e[?25h" # return/show cursor
     quiet_countdown "$TIMER" "$RETURN_TEXT"  # Call quiet countdown function
     exit 0
-elif [[ $QUIET_MODE -eq 1 && $TIMER -eq 0 ]]; then
-    printf "Timer must be set.\n\r" 
-    exit 1
 fi
