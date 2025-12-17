@@ -3,8 +3,7 @@
 Current release: https://github.com/Grawmpy/pause.sh/releases
 
 The program will echo "Press any key to continue..." indefinitely until either the user presses any key (but [Shift] or arrow keys), or the optional timer 
-[--t | --timer] reaches zero. Timer is shown in [00:00:00] format where hours and minutes hide as it reaches zero until the final count is [00]. The program allows for quiet running with no prompt, just 
-a pause with cursor blink [-q | --quiet] that must have a timer set as well in order to run. There is an option to place an alternative prompt which replaces the default with your own [-p | --prompt ,(Must be within double quotes)] and the ability to also add response text to the output [-r | --response (Must be within double quotes)].
+[--t | --timer] reaches zero. Timer is shown in [00:00:00] format where hours and minutes hide as it reaches zero until the final count is [00]. The program allows for quiet running with no prompt, just a pause with cursor blink [-q | --quiet] that must have a timer set as well in order to run. There is an option to place an alternative prompt which replaces the default with your own [-p | --prompt ,(Must be within double quotes)] and the ability to also add response text to the output [-r | --response (Must be within double quotes)]. I have added an echo function [--echo, -e] in order to send the keypress to the stdout. The script works inside command substitution to be able to populate variable for use inside the script.
 
 When I migrated to Linux from Windows/DOS, I was rather surprised that there wasn't some type of "pause" function of any sort within the basic functioning of Linux. I have played around with the script for a while and have tried to make this as close to pure bash as possible in every directive I used keeping commands to those built-in. I have also spent many hours trying very hard to get the time function on the countdown to be as accurate as possible using different sources but unfortunately there is no way to get the precision I was hoping for through simple bash. As it is now there is a loss of about a second during the course of an hour. 
 
@@ -20,6 +19,7 @@ The default prompt is "Press any key to continue..."
         -r, --response  [ text string required (string must be in quotes)  ]
         -h, --help      [ help information ]
         -q, --quiet     [ quiets text, requires timer be set. ]
+        -e, --echo      [ echoes the key pressed to stdout ]
     
         Examples:
         Input:  $ ./pause.sh
@@ -40,5 +40,12 @@ The default prompt is "Press any key to continue..."
                 $ [ Your Response ]
                 $
         [format of time will be 00:00:00]
+        
+        Input:  $ ./pause -e
+        Output: $ Press any key to continue... (Presses "j" key}
+                $ j
+                $
+        
     
         Note: quiet mode (-q|--quiet) will hide all output except response (-r|--response) text, if given, until contiuation of process.
+              Code will work inside command substitution to allow for populating variables within a script.
