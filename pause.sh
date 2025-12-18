@@ -78,6 +78,8 @@ PROMPT_SET=0
 COPYRIGHT="GPL3.0 License. Software is intended for free use only."
 DESCRIPTION="A simple script that interrupts the current process until user presses key or optional timer reaches 00."
 
+error_exit() { echo "Error: $1" >&2; exit 1; }
+
 # Timer details
 
 sanitize() {
