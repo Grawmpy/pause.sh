@@ -3,7 +3,7 @@
 ###################################################################################################################################################
 ###################################################################################################################################################
 #  pause.sh
-VERSION='5.0.1'
+#  Version: 5.0.2
 #  Author: Grawmpy (CSPhelps) <grawmpy@gmail.com>
 
 #  Description: This script allows for the interruption of the current process until either the
@@ -25,19 +25,17 @@ VERSION='5.0.1'
 #  and have built-in options to customize it without having to the coding yourself.
 
 #  Command: pause
-#  Options: [-p|--prompt] [-r|--response] [-t|--timer] [-q|--quiet] [-h|--help]
-#  pause ( without any options)
+#  Options: [-p|--prompt] [-r|--response] [-t|--timer] [-q|--quiet] [-e|--echo] [-h|--help]
+#  pause ( without any options) 
 #  $ Press any key to continue...
 #
-#  Options include: (spaces between option and data are ignored)
+#  Options include:
 #  [--prompt, -p] (prompt text must be inside double quotes, example: pause -p "Hello World", or pause --prompt "Hello World")
 #  [--response, -r ] (response text must be inside double quotes)
 #  [--timer, -t ] (Must be in total seconds. Example: pause -t 30, or pause --timer 30
 #  [--quiet, -q ] (No prompt, just cursor blink. Timer must be set for use. Example: pause -q -t 10, or pause --quiet --timer 10)
-#                  You can combine the quiet mode options, such as: pause -qt10
-#  [--echo, -e ] (Echoes the key pressed to use in command substitution to allow for use in menus, case statements, etc.)
-#                  Command substitution works to populate a variable 
-
+#  You can combine the quiet mode options, such as: pause -qt10
+#  [--echo, -e ] (Tells the script to echo the character pressed to stdout
 #  Order of options does not matter as they are processed when they are encountered by getopts and used later in the main logic.
 
 #  1. I wanted the script to have a way to change the default prompt to a custom text to accommodate for the needs of the user. 
@@ -65,14 +63,18 @@ VERSION='5.0.1'
 ###################################################################################################################################################
 ###################################################################################################################################################
 
+trap 'printf "\e[?25h\n"; exit 1' SIGINT SIGTERM
+
 # Variables
 DEFAULT_PROMPT="Press any key to continue..."
+VERSION='5.0.2'
 SCRIPT="${0##*/}"
 RETURN_TEXT=""
 KEY_PRESS=""
 ECHO_CHAR=0
 TIMER=0
 QUIET_MODE=0
+PROMPT_SET=0
 COPYRIGHT="GPL3.0 License. Software is intended for free use only."
 DESCRIPTION="A simple script that interrupts the current process until user presses key or optional timer reaches 00."
 
@@ -115,7 +117,7 @@ done
 set -- "${ARGS[@]}"
 
 # Parse command-line arguments
-while getopts "eqt:p:r:h" OPTION; do
+while getopts "qt:p:r:h" OPTION; do
     case "${OPTION}" in
         t)  
             if [ -z "${OPTARG}" ]; then
@@ -124,11 +126,15 @@ while getopts "eqt:p:r:h" OPTION; do
                 error_exit "Timer must be a non-negative integer."
             else
                 TIMER="${OPTARG}"
-            fi ;;
+            fi 
+            ;;
         p) 
-            DEFAULT_PROMPT=$(sanitize "${OPTARG}") ;;
+            DEFAULT_PROMPT=$(sanitize "${OPTARG}") 
+            PROMPT_SET=1
+            ;;
         r) 
-            RETURN_TEXT=$(sanitize "${OPTARG}") ;;
+            RETURN_TEXT=$(sanitize "${OPTARG}") 
+            ;;
         h) 
             printf "%s\n" "${SCRIPT}" "${VERSION}" "${COPYRIGHT}" "${DESCRIPTION}"
             printf "Usage:\n"
@@ -138,7 +144,6 @@ while getopts "eqt:p:r:h" OPTION; do
             printf "    -r, --response  [ requires text (string must be in quotes) ]\n"
             printf "    -h, --help      [ this information ]\n"
             printf "    -q, --quiet     [ quiet text, requires timer to be set. ]\n\n"
-            printf "    -e, --echo      [ echoes the keypress to stdout ]\n\n"
             printf ''
             printf "Examples:\n"
             printf "    Input: %s\n" "${SCRIPT}"
@@ -150,12 +155,16 @@ while getopts "eqt:p:r:h" OPTION; do
             printf "    Input: %s -t 10 -p \"Hello World\" -r \"And here we go.\"\n" "${SCRIPT}"
             printf "    Output: $ [10] Hello World\n"
             printf "            $ And here we go.\n"
-            exit 0 ;;
+            exit 0 
+            ;;
         q) 
-            QUIET_MODE=1 ;;
-        e)  ECHO_CHAR=1 ;;
+            QUIET_MODE=1 
+            ;;
+        e)  ECHO_CHAR=1 
+            ;;
         ?) 
-            error_exit "Invalid option. Use -h for help." ;;
+            error_exit "Invalid option. Use -h for help." 
+            ;;
     esac
 done
 shift "$((OPTIND - 1))"
@@ -163,8 +172,9 @@ shift "$((OPTIND - 1))"
 # Function to display the remaining time in the desired format
 display_time() {
     local total_seconds="$1"
+    local _dest_var="$2"  # New: Pass the name of the variable to store result
+    local _output=""      # Build the string here
     
-    # Calculate time components
     local years=$(( total_seconds / 31536000 ))
     local months=$(( (total_seconds % 31536000) / 2592000 ))
     local days=$(( (total_seconds % 2592000) / 86400 ))
@@ -172,14 +182,21 @@ display_time() {
     local minutes=$(( (total_seconds % 3600) / 60 ))
     local seconds=$(( total_seconds % 60 ))
 
-    # Output format
-    printf '['
-    [[ ${years} -gt 0 ]] && printf '%02dyr:' "${years}"
-    [[ ${months} -gt 0 ]] && printf '%02dmn:' "${months}"
-    [[ ${days} -gt 0 ]] && printf '%02ddy:' "${days}"
-    [[ ${hours} -gt 0 ]] && printf '%02d:' "${hours}"
-    [[ ${minutes} -gt 0 ]] && printf '%02d:' "${minutes}"
-    printf '%02d]' "${seconds}"
+    _output+='['
+    local active=false
+    if [[ ${years} -gt 0 || $active == "true" ]]; then _output+="$(printf '%02dyr:' "${years}")"; active="true"; fi
+    if [[ ${months} -gt 0 || $active == "true" ]]; then _output+="$(printf '%02dmn:' "${months}")"; active="true"; fi
+    if [[ ${days} -gt 0 || $active == "true" ]]; then _output+="$(printf '%02ddy:' "${days}")"; active="true"; fi
+    if [[ ${hours} -gt 0 || $active == "true" ]]; then _output+="$(printf '%02d:' "${hours}")"; active="true"; fi
+    if [[ ${minutes} -gt 0 || $active == "true" ]]; then _output+="$(printf '%02d:' "${minutes}")"; active="true"; fi
+    _output+="$(printf '%02d]' "${seconds}")"
+
+    # Assign the result back to the variable name passed as $2
+    if [[ -n "$_dest_var" ]]; then
+        printf -v "$_dest_var" "%s" "$_output"
+    else
+        printf "%s" "$_output"
+    fi
 }
 
 # Function for the quiet countdown
@@ -203,7 +220,7 @@ quiet_countdown() {
         fi
 
         # Check for key press without displaying anything
-        read -r -t 0.1 KEY_PRESS
+        read -rsn1 -t 0.1 KEY_PRESS
         status=$?
         if [[ ${status} -eq 0 ]]; then loop_count=0;
             [[ ${ECHO_CHAR} -eq 1 ]] && printf '%s' "${KEY_PRESS}"
@@ -238,30 +255,30 @@ interrupt() {
         printf ' %s' "${text_prompt}"
     fi
 
-    while (( loop_count > 0 )); do
-        read -r -t 0.1 KEY_PRESS; status=$?
-        if [[ ${status} -eq 0 ]]; then loop_count=0;
-            [[ ${ECHO_CHAR} -eq 1 ]] && printf '%s' "${KEY_PRESS}"
-            printf "\n" >&2
-            break; 
-        fi
-        
-        if (( $(date +%s) - start_time >= 1 )); then
-            loop_count=$((loop_count - 1))
-            start_time=$(date +%s)
-            
-            if [ "${QUIET_MODE}" -eq 0 ]; then 
-                # --- The Non-Blinking Update Idea ---
-                # 1. Move cursor back to column 0
-                # 2. Re-display the entire line (overwriting the old one)
-                # This is the smoothest way without tracking previous string length.
-                printf '\r'
-                display_time "${loop_count}"
-                printf ' %s' "${text_prompt}"
-            fi
-        fi
-    done
+while (( loop_count > 0 )); do
+    read -rsn1 -t 0.1 KEY_PRESS; status=$?
+    if [[ ${status} -eq 0 ]]; then 
+        loop_count=0;
+        [[ ${ECHO_CHAR} -eq 1 ]] && printf '%s' "${KEY_PRESS}"
+        printf "\n" >&2
+        break; 
+    fi
     
+    if (( $(date +%s) - start_time >= 1 )); then
+        loop_count=$((loop_count - 1))
+        start_time=$(date +%s)
+        
+        display_time "${loop_count}" "TIME_STR"
+
+        
+        # Send EVERYTHING to the terminal in one single shot
+        # \r = Start of line
+        # \e[K = Clear old text
+        # %s %s = New timer and prompt
+        printf "\r\e[K%s %s" "${TIME_STR}" "${text_prompt}"
+    fi
+done
+
     if [ "${QUIET_MODE}" -eq 0 ]; then
         printf "\e[?25h" # show cursor
     fi
@@ -269,30 +286,31 @@ interrupt() {
     [[ -n ${return_prompt} ]] && printf '%s\n' "${return_prompt}"
 }
 
+# If -e is set AND the user DID NOT provide a custom prompt, 
+# then wipe out the default prompt.
+if [[ ${ECHO_CHAR} -eq 1 && ${PROMPT_SET} -eq 0 ]]; then
+    DEFAULT_PROMPT=""
+fi
 
 # Main logic based on quiet and timer flags
 if [[ ${QUIET_MODE} -eq 0 && ${TIMER} -eq 0 ]]; then
-    # Capture the key here
-    read -rsn1 -p "${DEFAULT_PROMPT}" KEY_PRESS ; status=$?
-        if [[ ${status} -eq 0 ]]; then loop_count=0;
-            [[ ${ECHO_CHAR} -eq 1 ]] && printf '%s' "${KEY_PRESS}"
-            printf "\n" >&2 
-        fi
+    # Use -p for the prompt; status check for key press
+    if read -rsn1 -p "${DEFAULT_PROMPT}" KEY_PRESS; then
+        [[ ${ECHO_CHAR} -eq 1 ]] && printf '%s' "${KEY_PRESS}"
+        printf "\n" >&2 
+    fi
     exit 0
 
 elif [[ ${QUIET_MODE} -eq 0 && ${TIMER} -gt 0 ]]; then
+    # The function handles the newlines and the return prompt
     interrupt "${TIMER}" "${DEFAULT_PROMPT}" "${RETURN_TEXT}"
-    # KEY_PRESS was set inside interrupt()
-    printf "\n\r"
     exit 0
 
 elif [[ ${QUIET_MODE} -eq 1 && ${TIMER} -gt 0 ]]; then
     quiet_countdown "${TIMER}" "${RETURN_TEXT}"
-    # KEY_PRESS was set inside quiet_countdown()
-    printf "\n\r"
     exit 0
 
 elif [[ ${QUIET_MODE} -eq 1 && ${TIMER} -eq 0 ]]; then
-    printf "Timer must be set.\n\r" 
+    printf "Error: Timer must be set when using quiet mode.\n" >&2
     exit 1
 fi
