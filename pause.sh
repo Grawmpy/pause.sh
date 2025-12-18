@@ -1,11 +1,4 @@
 #!/usr/bin/env bash
-###################################################################################################################################################
-###################################################################################################################################################
-###################################################################################################################################################
-#  pause.sh
-#  Version: 5.0.2
-#  Author: Grawmpy (CSPhelps) <grawmpy@gmail.com>
-
 #  Description: This script allows for the interruption of the current process until either the
 #  timer reaches 00 or the user presses any key. If no timer is used, the process
 #  will be stopped indefinitely until the user manually continues the process with
