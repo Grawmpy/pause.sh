@@ -196,7 +196,7 @@ countdown() {
     local return_prompt="$3"
     local quiet_mode=${QUIET_MODE}
     local start_time
-    printf -v start_time '%(%s)T' -1
+    start_time=$(date "+%s") 
     
     if [ "${quiet_mode}" -eq 0 ]; then
         printf "\e[?25l" # hide cursor
@@ -220,10 +220,9 @@ countdown() {
                     fi
         esac
 
-        printf -v now '%(%s)T' -1
-        if (( now - start_time >= 1 )); then
+        if (( $(date "+%s") - start_time >= 1 )); then
             loop_count=$((loop_count - 1))
-            printf -v start_time '%(%s)T' -1
+            start_time=$(date "+%s") 
             
             if [ "${quiet_mode}" -eq 0 ]; then 
                 printf '\r'
