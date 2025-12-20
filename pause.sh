@@ -2,7 +2,7 @@
 ###################################################################################################################################################
 ###################################################################################################################################################
 ###################################################################################################################################################
-#  pause.sh
+#  Script: pause.sh
 #  Version: 5.0.2
 #  Author: Grawmpy (CSPhelps) <grawmpy@gmail.com>
 #
@@ -23,25 +23,25 @@
 #  Options include: (white spaces between option and it's value are not counted, it looks for first value next to the option):
 #  [--prompt, -p "TEXT"]        (Prompt text must be inside double quotes, example: pause -p "Hello World", or pause --prompt "Hello World")
 #  [--response, -r "TEXT"]      (Response text must be inside double quotes, example: pause -r "Thank you. Continuing...", or pause --response "Thank you. Continuing..")
-#  [--timer, -t NUMBER ]     (Must be in total seconds. Example: pause -t 30, or pause --timer 30)
-#  [--quiet, -q ]               (No prompt, just cursor blink. Timer must be set for use. Example: pause -q -t 10, or pause --quiet --timer 10, or pause -qt10 for simplicity)
+#  [--timer, -t NUMBER ]        (Must be in total seconds. Example: pause -t 30, or pause --timer 30)
+#  [--quiet, -q ]               (No prompt, just cursor blink. Timer must be set for use. Example: pause -q -t 10, or pause --quiet --timer 10, or pause -qt10)
 #                                   You can combine the quiet mode options, such as: pause -qt10
 #  [--echo, -e ]                (Echoes the key pressed character to use inside script for passing to a variable. I explicitly send the prompt and
 #                                   response echoes to the >&2 which will allow for sending the prompt and response information to either logs or terminal
 #                                   depending on how you set up your script. Using simple command substitution the key pressed is echoed in order to
 #                                   in order to be useful in case statements or other areas where a single key press needs to be used. )
-#  [--chars, -c NUMBER ]     (Allows the user to define how many keys will be captured by the pause program. Will capture up to the NUMBER given.
-#                                   does not work with timed sequences, only the static prompt.)
 #
-#  Order of options does not matter as they are processed when they are encountered by getopts and used later in the main logic.
+#  Copyright (C) 2025 Grawmpy (CSPhelps) <grawmpy@gmail.com>
+#  This software is licensed under the GNU General Public License (GPL) version 3.0 only.
+# 
+#  This software is provided "as-is" without any express or implied warranty. This includes, but is not limited to,
+#  the WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, and NONINFRINGEMENT. In no event shall the 
+#  author(s) and/or copyright holders be held liable for any claim, damages, or other liability, whether in an action 
+#  of contract, tort, or otherwise, arising from, out of, or in connection with the software or the use or other
+#  dealings in the software. 
+# 
+#  Users are granted the rights to use, modify, and distribute this software.
 #
-#  Copyright: GPL 3.0, THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, 
-#  EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
-#  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE 
-#  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
-#  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
-#  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE 
-#  SOFTWARE. 
 ###################################################################################################################################################
 ###################################################################################################################################################
 ###################################################################################################################################################
