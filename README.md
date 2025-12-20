@@ -47,5 +47,7 @@ The default prompt is "Press any key to continue..."
                 $
         
     
-        Note: quiet mode (-q|--quiet) will hide all output except response (-r|--response) text, if given, until contiuation of process.
-              Code will work inside command substitution to allow for populating variables within a script.
+        Note: quiet mode (-q|--quiet) will hide all output except response (-r|--response) text, 
+        if given, until contiuation of process.
+              
+        Code will work inside command substitution to allow for populating variables within a script.
