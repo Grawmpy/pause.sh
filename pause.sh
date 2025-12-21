@@ -16,17 +16,17 @@
 #  and at the same time offer functionality that the pause function should have had in DOS.
 #
 #  Command: pause
-#  Options: [-p|--prompt] [-r|--response] [-t|--timer] [-q|--quiet] [-e|--echo ] [-h|--help]
+#  Options: [-p|--prompt "<TEXT>"] [-r|--response "<TEXT>"] [-t|--timer <NUMBER>] 
+#           [-q|--quiet] [-e|--echo ] [-h|--help]
 #  pause ( without any options)
 #  $ Press any key to continue...
 #
 #  Options include: (white spaces between option and it's value are not counted, it looks for first value next to the option):
-#  [--prompt, -p "TEXT"]        (Prompt text must be inside double quotes, example: pause -p "Hello World", or pause --prompt "Hello World")
-#  [--response, -r "TEXT"]      (Response text must be inside double quotes, example: pause -r "Thank you. Continuing...", or pause --response "Thank you. Continuing..")
-#  [--timer, -t NUMBER ]        (Must be in total seconds. Example: pause -t 30, or pause --timer 30)
-#  [--quiet, -q ]               (No prompt, just cursor blink. Timer must be set for use. Example: pause -q -t 10, or pause --quiet --timer 10, or pause -qt10)
-#                                   You can combine the quiet mode options, such as: pause -qt10
-#  [--echo, -e ]                (Echoes the key pressed character to use inside script for passing to a variable. I explicitly send the prompt and
+#  [--prompt, -p "<TEXT>"]        (Prompt text must be inside double quotes, example: pause -p "Hello World", or pause --prompt "Hello World")
+#  [--response, -r "<TEXT>"]      (Response text must be inside double quotes, example: pause -r "Thank you. Continuing...", or pause --response "Thank you. Continuing..")
+#  [--timer, -t <NUMBER> ]        (Must be in total seconds. Example: pause -t 30, or pause --timer 30)
+#  [--quiet, -q ]                 (No prompt, just cursor blink. Timer must be set for use. Example: pause -q -t 10, or pause --quiet --timer 10, or pause -qt10)
+#  [--echo, -e ]                  (Echoes the key pressed character to use inside script for passing to a variable. I explicitly send the prompt and
 #                                   response echoes to the >&2 which will allow for sending the prompt and response information to either logs or terminal
 #                                   depending on how you set up your script. Using simple command substitution the key pressed is echoed in order to
 #                                   in order to be useful in case statements or other areas where a single key press needs to be used. )
@@ -63,8 +63,15 @@ TIMER=0
 VERSION="5.0.2"
 QUIET_MODE=0
 ECHO_CHAR=0
-COPYRIGHT="GPL3.0 only. Software is intended for free use and open source."
-DESCRIPTION="A simple script that interrupts the current process until user presses key or optional timer reaches 00."
+COPYRIGHT="Copyright (c) 2025 Grawmpy (CSPhelps) <grawmpy@gmail.com>
+
+This software is licensed under the GNU General Public License (GPL) 
+version 3.0 only.
+"
+DESCRIPTION="
+A simple script that interrupts the current process until user presses 
+any alphanumeric key, or optional timer reaches 00.
+"
 
 # Timer details
 
@@ -106,21 +113,23 @@ set -- "${ARGS[@]}"
 
 HELP_TEXT="$(cat <<helpText 
 ${SCRIPT} ${VERSION}
+
 ${COPYRIGHT} ${DESCRIPTION}
-Command: pause
+
+Command: ${SCRIPT}
 Options: [-p|--prompt <TEXT>] [-r|--response <TEXT>] [-t|--timer <NUMBER>] 
          [-q|--quiet] [-e|--echo ] [-h|--help]
 
 Usage: 
-[--prompt, -p "<TEXT>"]   (Prompt text must be inside double quotes, example: pause -p "Hello World", 
-                            or pause --prompt "Hello World". Output is to stderr)
-[--response, -r "<TEXT>"] (Response text must be inside double quotes, example: pause -r "Thank you. Continuing...",
-                            or pause --response "Thank you. Continuing..". Output is to stderr)
-[--timer, -t <NUMBER> ]   (NUMBER is total seconds for delay.)
-[--quiet, -q ]            (No prompt, just cursor blink. Timer must be set for use. Example: pause -q -t 10, 
-                            or pause --quiet --timer 10, or pause -qt10 for simplicity.)
-                          [You can combine the quiet mode options, such as: pause -qt10]
-[--echo, -e ]             (Echoes the key pressed character to stdout for passing to a variable. )
+[--prompt, -p]   Outputs to stderr. Prompt text must be inside double quotes, example: ${SCRIPT} -p "Hello World", 
+                    or ${SCRIPT} --prompt "Hello World".
+[--response, -r] Outputs to stderr. Response text must be inside double quotes, 
+                    example: ${SCRIPT} -r "Thank you. Continuing...",
+                    or ${SCRIPT} --response "Thank you. Continuing..". 
+[--timer, -t]    NUMBER is total seconds for delay. Can use arithmetic evaluation.
+[--quiet, -q]    No text, just cursor blink. Timer must be set for use. Example: ${SCRIPT} -q -t 10, 
+                    or ${SCRIPT} --quiet --timer 10, or ${SCRIPT} -qt10 for simplicity.
+[--echo, -e]     Echoes the key pressed character to stdout for passing to a variable.
 
 Examples:
     Input: ${SCRIPT}
