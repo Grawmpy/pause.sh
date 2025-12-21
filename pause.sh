@@ -63,7 +63,7 @@ TIMER=0
 VERSION="5.0.2"
 QUIET_MODE=0
 ECHO_CHAR=0
-COPYRIGHT="MIT License. Software is intended for free use only."
+COPYRIGHT="GPL3.0 only. Software is intended for free use and open source."
 DESCRIPTION="A simple script that interrupts the current process until user presses key or optional timer reaches 00."
 
 # Timer details
