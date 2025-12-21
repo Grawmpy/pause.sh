@@ -112,26 +112,24 @@ Options: [-p|--prompt <TEXT>] [-r|--response <TEXT>] [-t|--timer <NUMBER>]
          [-q|--quiet] [-e|--echo ] [-h|--help]
 
 Usage: 
-[--prompt, -p "TEXT"]   (Prompt text must be inside double quotes, example: pause -p "Hello World", 
-                          or pause --prompt "Hello World")
-[--response, -r "TEXT"] (Response text must be inside double quotes, example: pause -r "Thank you. Continuing...",
-                          or pause --response "Thank you. Continuing..")
-[--timer, -t NUMBER ]   (NUMBER is total seconds for delay.)
-[--quiet, -q ]          (No prompt, just cursor blink. Timer must be set for use. Example: pause -q -t 10, 
-                          or pause --quiet --timer 10, or pause -qt10 for simplicity)
+[--prompt, -p "<TEXT>"]   (Prompt text must be inside double quotes, example: pause -p "Hello World", 
+                            or pause --prompt "Hello World". Output is to stderr)
+[--response, -r "<TEXT>"] (Response text must be inside double quotes, example: pause -r "Thank you. Continuing...",
+                            or pause --response "Thank you. Continuing..". Output is to stderr)
+[--timer, -t <NUMBER> ]   (NUMBER is total seconds for delay.)
+[--quiet, -q ]            (No prompt, just cursor blink. Timer must be set for use. Example: pause -q -t 10, 
+                            or pause --quiet --timer 10, or pause -qt10 for simplicity.)
                           [You can combine the quiet mode options, such as: pause -qt10]
-[--echo, -e ]           (Echoes the key pressed character to use inside script for passing to a variable. )
-                        [Note: I explicitly send the prompt and response echoes to stderr, which will allow for sending 
-                          to either logs or terminal depending on how you set up your script.
-                          Using simple command substitution the key pressed is echoed to stdout.]
+[--echo, -e ]             (Echoes the key pressed character to stdout for passing to a variable. )
+
 Examples:
     Input: ${SCRIPT}
     Output: ${DEFAULT_PROMPT}
     Input: ${SCRIPT} -t 10 
-    Output: $ [10] %s\n \${DEFAULT_PROMPT}
-    Input: ${SCRIPT} -t 10 -p \"Hello World\" \${SCRIPT}
+    Output: $ [10] ${DEFAULT_PROMPT}
+    Input: ${SCRIPT} -t 10 -p "Hello World" ${SCRIPT}
     Output: $ [10] Hello World
-    Input: ${SCRIPT} -t 10 -p \"Hello World\" -r \"And here we go.\"
+    Input: ${SCRIPT} -t 10 -p "Hello World" -r "And here we go."
     Output: $ [10] Hello World
             $ And here we go.
 helpText
