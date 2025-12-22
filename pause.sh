@@ -21,15 +21,17 @@
 #  pause ( without any options)
 #  $ Press any key to continue...
 #
-#  Options include: (white spaces between option and it's value are not counted, it looks for first value next to the option):
-#  [--prompt, -p "<TEXT>"]        (Prompt text must be inside double quotes, example: pause -p "Hello World", or pause --prompt "Hello World")
-#  [--response, -r "<TEXT>"]      (Response text must be inside double quotes, example: pause -r "Thank you. Continuing...", or pause --response "Thank you. Continuing..")
-#  [--timer, -t <NUMBER> ]        (Must be in total seconds. Example: pause -t 30, or pause --timer 30)
-#  [--quiet, -q ]                 (No prompt, just cursor blink. Timer must be set for use. Example: pause -q -t 10, or pause --quiet --timer 10, or pause -qt10)
-#  [--echo, -e ]                  (Echoes the key pressed character to use inside script for passing to a variable. I explicitly send the prompt and
-#                                   response echoes to the >&2 which will allow for sending the prompt and response information to either logs or terminal
-#                                   depending on how you set up your script. Using simple command substitution the key pressed is echoed in order to
-#                                   in order to be useful in case statements or other areas where a single key press needs to be used. )
+#  Options:
+#  -p, --prompt        
+#       Directed to STDERR (>&2). TEXT must be inside double quotes
+#  -r, --response      
+#       Directed to STDERR (>&2). TEXT must be inside double quotes
+#  -t , --timer        
+#       NUMBER must be in total seconds.
+#  -q, --quiet                 
+#       No prompt, just cursor blink. Timer must be set for use.
+#  -e, --echo
+#       Directed to STDOUT. Using simple command substitution the key pressed is echoed 
 #
 #  Copyright (C) 2025 Grawmpy (CSPhelps) <grawmpy@gmail.com>
 #  This software is licensed under the GNU General Public License (GPL) version 3.0 only.
@@ -117,28 +119,32 @@ ${SCRIPT} ${VERSION}
 ${COPYRIGHT} ${DESCRIPTION}
 
 Command: ${SCRIPT}
-Options: [-p|--prompt <TEXT>] [-r|--response <TEXT>] [-t|--timer <NUMBER>] 
+Options: [-p|--prompt "<TEXT>"] [-r|--response "<TEXT>"] [-t|--timer <NUMBER>] 
          [-q|--quiet] [-e|--echo ] [-h|--help]
 
 Usage: 
-[--prompt, -p]   Outputs to stderr. Prompt text must be inside double quotes, example: ${SCRIPT} -p "Hello World", 
-                    or ${SCRIPT} --prompt "Hello World".
-[--response, -r] Outputs to stderr. Response text must be inside double quotes, 
-                    example: ${SCRIPT} -r "Thank you. Continuing...",
-                    or ${SCRIPT} --response "Thank you. Continuing..". 
-[--timer, -t]    NUMBER is total seconds for delay. Can use arithmetic evaluation.
-[--quiet, -q]    No text, just cursor blink. Timer must be set for use. Example: ${SCRIPT} -q -t 10, 
-                    or ${SCRIPT} --quiet --timer 10, or ${SCRIPT} -qt10 for simplicity.
-[--echo, -e]     Echoes the key pressed character to stdout for passing to a variable.
+[--prompt, -p]   
+    Outputs to STDERR. Prompt text must be inside quotes. 
+    Example: ${SCRIPT} -p "Hello World", or ${SCRIPT} --prompt "Hello World".
+[--response, -r] 
+    Outputs to STDERR. Response text must be inside quotes, 
+    Example: ${SCRIPT} -r "Thank you. Continuing...", or ${SCRIPT} --response "Thank you. Continuing..". 
+[--timer, -t]    
+    NUMBER is total seconds (only) for delay.
+[--quiet, -q] 
+    No text, just cursor blink. Timer must be set for use. 
+    Example: ${SCRIPT} -q -t 10, or ${SCRIPT} --quiet --timer 10, or ${SCRIPT} -qt10 for simplicity.
+[--echo, -e]
+    Outputs to STDOUT. Without prompt option this will assume a null -p, --prompt value
 
 Examples:
-    Input: ${SCRIPT}
+    Input:  ${SCRIPT}
     Output: ${DEFAULT_PROMPT}
-    Input: ${SCRIPT} -t 10 
+    Input:  ${SCRIPT} -t 10 
     Output: $ [10] ${DEFAULT_PROMPT}
-    Input: ${SCRIPT} -t 10 -p "Hello World" ${SCRIPT}
+    Input:  ${SCRIPT} -t 10 -p "Hello World" ${SCRIPT}
     Output: $ [10] Hello World
-    Input: ${SCRIPT} -t 10 -p "Hello World" -r "And here we go."
+    Input:  ${SCRIPT} -t 10 -p "Hello World" -r "And here we go."
     Output: $ [10] Hello World
             $ And here we go.
 helpText
@@ -174,6 +180,7 @@ while getopts "eqt:p:r:h" OPTION; do
 done
 shift "$((OPTIND - 1))"
 
+if [[ "${ECHO_CHAR}" -eq 1 || "${DEFAULT_PROMPT}" == "Press any key to continue..." ]] ; then DEFAULT_PROMPT=" " ; fi
 # Function to display the remaining time in the desired format
 display_time() {
     local total_seconds="$1"
@@ -262,7 +269,6 @@ if [[ ${QUIET_MODE} -eq 0 && ${TIMER} -eq 0 ]]; then
         fi
 
         # 2. Redirect UI feedback to STDERR so the user sees it immediately
-        #printf '\n' >&2
         if [[ -n ${RETURN_TEXT} ]]; then 
             # Added >&2 to ensure this prints to the terminal, not the variable
             printf '\r\n%s\n' "${RETURN_TEXT}" >&2
