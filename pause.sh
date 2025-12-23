@@ -21,15 +21,19 @@
 #  pause ( without any options)
 #  $ Press any key to continue...
 #
-#  Options include: (white spaces between option and it's value are not counted, it looks for first value next to the option):
-#  [--prompt, -p "<TEXT>"]        (Prompt text must be inside double quotes, example: pause -p "Hello World", or pause --prompt "Hello World")
-#  [--response, -r "<TEXT>"]      (Response text must be inside double quotes, example: pause -r "Thank you. Continuing...", or pause --response "Thank you. Continuing..")
-#  [--timer, -t <NUMBER> ]        (Must be in total seconds. Example: pause -t 30, or pause --timer 30)
-#  [--quiet, -q ]                 (No prompt, just cursor blink. Timer must be set for use. Example: pause -q -t 10, or pause --quiet --timer 10, or pause -qt10)
-#  [--echo, -e ]                  (Echoes the key pressed character to use inside script for passing to a variable. I explicitly send the prompt and
-#                                   response echoes to the >&2 which will allow for sending the prompt and response information to either logs or terminal
-#                                   depending on how you set up your script. Using simple command substitution the key pressed is echoed in order to
-#                                   in order to be useful in case statements or other areas where a single key press needs to be used. )
+#  Script closes with the press of any printable character, [Space], and [Enter]. Ignores special characters.
+#
+#  Options:
+#  -p, --prompt 
+#       Sent to STDERR. TEXT must be inside double quotes
+#  [-r, --response
+#       Sent to STDERR. TEXT must be inside double quotes
+#  -t, --timer
+#       NUMBER in total seconds
+#  -q, --quiet
+#       No prompt, just cursor blink. Timer required
+#  -e, --echo
+#       Echoes the pressed key character to STDOUT.
 #
 #  Copyright (C) 2025 Grawmpy (CSPhelps) <grawmpy@gmail.com>
 #  This software is licensed under the GNU General Public License (GPL) version 3.0 only.
@@ -72,13 +76,6 @@ DESCRIPTION="
 A simple script that interrupts the current process until user presses 
 any alphanumeric key, space, Enter, or when optional timer reaches [00].
 "
-
-pass_to_stderr(){
-    text=$1
-    printf "${text}" >&2
-}
-
-# Timer details
 
 sanitize() {
     local input="$1"
@@ -137,10 +134,12 @@ Usage:
     No text, just cursor blink. Timer required
 -e, --echo
     Echoes the key pressed character to stdout
+-v, --version 
+    ${SCRIPT^}'s current version
 
-By separating outputs directly to STDOUT and STDERR the keypress
-output is sent to a variable using command substitution. Otherwise
-the keypress is echoed to terminal.
+By separating outputs directly to STDOUT and STDERR, ${SCRIPT} is able
+to be used in variable using command substitution. Otherwise the keypress 
+is echoed to terminal.
 
 Examples:
     Input: ${SCRIPT}
@@ -224,7 +223,7 @@ countdown() {
         # Print initial line once
         printf '\r'  # Go to column 0
         display_time "${loop_count}"
-        pass_to_stderr "\040${text_prompt}"
+        printf '%s' "\040${text_prompt}"
     fi
 
     while (( loop_count > 0 )); do
@@ -257,7 +256,7 @@ countdown() {
     fi
 
         if [[ -n ${return_prompt} ]]; then 
-            pass_to_stderr "\r\n${return_prompt}"
+            printf '%s' "\r\n${return_prompt}\n\r"
         fi
 }
 
@@ -288,7 +287,7 @@ if [[ ${QUIET_MODE} -eq 0 && ${TIMER} -eq 0 ]]; then
         fi
     fi
     if [[ -n ${return_prompt} ]]; then 
-        pass_to_stderr "\r\n${return_prompt}"
+        printf '%s' "\r\n${return_prompt}"
     fi
     exit 0
 
