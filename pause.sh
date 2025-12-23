@@ -180,7 +180,7 @@ while getopts "eqt:p:r:h" OPTION; do
 done
 shift "$((OPTIND - 1))"
 
-if [[ "${ECHO_CHAR}" -eq 1 || "${DEFAULT_PROMPT}" == "Press any key to continue..." ]] ; then DEFAULT_PROMPT=" " ; fi
+if [[ "${ECHO_CHAR}" -eq 1 && "${DEFAULT_PROMPT}" == "Press any key to continue..." ]] ; then DEFAULT_PROMPT=" " ; fi
 # Function to display the remaining time in the desired format
 display_time() {
     local total_seconds="$1"
