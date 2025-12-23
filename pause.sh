@@ -21,17 +21,15 @@
 #  pause ( without any options)
 #  $ Press any key to continue...
 #
-#  Options:
-#  -p, --prompt        
-#       Directed to STDERR (>&2). TEXT must be inside double quotes
-#  -r, --response      
-#       Directed to STDERR (>&2). TEXT must be inside double quotes
-#  -t , --timer        
-#       NUMBER must be in total seconds.
-#  -q, --quiet                 
-#       No prompt, just cursor blink. Timer must be set for use.
-#  -e, --echo
-#       Directed to STDOUT. Using simple command substitution the key pressed is echoed 
+#  Options include: (white spaces between option and it's value are not counted, it looks for first value next to the option):
+#  [--prompt, -p "<TEXT>"]        (Prompt text must be inside double quotes, example: pause -p "Hello World", or pause --prompt "Hello World")
+#  [--response, -r "<TEXT>"]      (Response text must be inside double quotes, example: pause -r "Thank you. Continuing...", or pause --response "Thank you. Continuing..")
+#  [--timer, -t <NUMBER> ]        (Must be in total seconds. Example: pause -t 30, or pause --timer 30)
+#  [--quiet, -q ]                 (No prompt, just cursor blink. Timer must be set for use. Example: pause -q -t 10, or pause --quiet --timer 10, or pause -qt10)
+#  [--echo, -e ]                  (Echoes the key pressed character to use inside script for passing to a variable. I explicitly send the prompt and
+#                                   response echoes to the >&2 which will allow for sending the prompt and response information to either logs or terminal
+#                                   depending on how you set up your script. Using simple command substitution the key pressed is echoed in order to
+#                                   in order to be useful in case statements or other areas where a single key press needs to be used. )
 #
 #  Copyright (C) 2025 Grawmpy (CSPhelps) <grawmpy@gmail.com>
 #  This software is licensed under the GNU General Public License (GPL) version 3.0 only.
@@ -72,8 +70,13 @@ version 3.0 only.
 "
 DESCRIPTION="
 A simple script that interrupts the current process until user presses 
-any alphanumeric key, or optional timer reaches 00.
+any alphanumeric key, space, Enter, or when optional timer reaches [00].
 "
+
+pass_to_stderr(){
+    text=$1
+    printf "${text}" >&2
+}
 
 # Timer details
 
@@ -93,6 +96,7 @@ OPT_MAP["--response"]="-r"
 OPT_MAP["--help"]="-h"
 OPT_MAP["--quiet"]="-q"
 OPT_MAP["--echo"]="-e"
+OPT_MAP["--version"]="-v"
 
 ARGS=()
 
@@ -123,35 +127,36 @@ Options: [-p|--prompt "<TEXT>"] [-r|--response "<TEXT>"] [-t|--timer <NUMBER>]
          [-q|--quiet] [-e|--echo ] [-h|--help]
 
 Usage: 
-[--prompt, -p]   
-    Outputs to STDERR. Prompt text must be inside quotes. 
-    Example: ${SCRIPT} -p "Hello World", or ${SCRIPT} --prompt "Hello World".
-[--response, -r] 
-    Outputs to STDERR. Response text must be inside quotes, 
-    Example: ${SCRIPT} -r "Thank you. Continuing...", or ${SCRIPT} --response "Thank you. Continuing..". 
-[--timer, -t]    
-    NUMBER is total seconds (only) for delay.
-[--quiet, -q] 
-    No text, just cursor blink. Timer must be set for use. 
-    Example: ${SCRIPT} -q -t 10, or ${SCRIPT} --quiet --timer 10, or ${SCRIPT} -qt10 for simplicity.
-[--echo, -e]
-    Outputs to STDOUT. Without prompt option this will assume a null -p, --prompt value
+-p, --prompt   
+    Outputs to stderr. TEXT must be inside double quotes
+-r, --response 
+    Outputs to stderr. TEXT must be inside double quotes, 
+-t, --timer
+    NUMBER is total seconds
+-p, --quiet
+    No text, just cursor blink. Timer required
+-e, --echo
+    Echoes the key pressed character to stdout
+
+By separating outputs directly to STDOUT and STDERR the keypress
+output is sent to a variable using command substitution. Otherwise
+the keypress is echoed to terminal.
 
 Examples:
-    Input:  ${SCRIPT}
+    Input: ${SCRIPT}
     Output: ${DEFAULT_PROMPT}
-    Input:  ${SCRIPT} -t 10 
+    Input: ${SCRIPT} -t 10 
     Output: $ [10] ${DEFAULT_PROMPT}
-    Input:  ${SCRIPT} -t 10 -p "Hello World" ${SCRIPT}
+    Input: ${SCRIPT} -t 10 -p "Hello World" ${SCRIPT}
     Output: $ [10] Hello World
-    Input:  ${SCRIPT} -t 10 -p "Hello World" -r "And here we go."
+    Input: ${SCRIPT} -t 10 -p "Hello World" -r "And here we go."
     Output: $ [10] Hello World
             $ And here we go.
 helpText
 )"
 
 # Parse command-line arguments
-while getopts "eqt:p:r:h" OPTION; do
+while getopts "t:p:r:hqev" OPTION; do
     case "${OPTION}" in
         t)  
             if [ -n "${OPTARG}" ]; then
@@ -174,13 +179,15 @@ while getopts "eqt:p:r:h" OPTION; do
         q) 
             QUIET_MODE=1 ;;
         e)  ECHO_CHAR=1 ;;
+        v)  printf '%s\n' "${SCRIPT} v${VERSION}" ;;
         ?) 
             error_exit "Invalid option. Use -h for help." ;;
     esac
 done
 shift "$((OPTIND - 1))"
 
-if [[ "${ECHO_CHAR}" -eq 1 && "${DEFAULT_PROMPT}" == "Press any key to continue..." ]] ; then DEFAULT_PROMPT=" " ; fi
+[[ "${ECHO_CHAR}" -eq 1 && "${DEFAULT_PROMPT}" == "Press key to continue..." ]] && DEFAULT_PROMPT=""
+
 # Function to display the remaining time in the desired format
 display_time() {
     local total_seconds="$1"
@@ -217,7 +224,7 @@ countdown() {
         # Print initial line once
         printf '\r'  # Go to column 0
         display_time "${loop_count}"
-        printf ' %s' "${text_prompt}"
+        pass_to_stderr "\040${text_prompt}"
     fi
 
     while (( loop_count > 0 )); do
@@ -241,8 +248,7 @@ countdown() {
             if [ "${quiet_mode}" -eq 0 ]; then 
                 printf '\r'
                 display_time "${loop_count}"
-                printf ' %s' "${text_prompt}"
-            fi
+             fi
         fi
     done
     
@@ -251,32 +257,40 @@ countdown() {
     fi
 
         if [[ -n ${return_prompt} ]]; then 
-            # Added >&2 to ensure this prints to the terminal, not the variable
-            printf '\r\n%s\n' "${return_prompt}" >&2
-        else
-            printf '\n' >&2
+            pass_to_stderr "\r\n${return_prompt}"
         fi
 }
 
 # Main logic based on quiet and timer flags
 if [[ ${QUIET_MODE} -eq 0 && ${TIMER} -eq 0 ]]; then
-    if read -rsn1 -p "${DEFAULT_PROMPT}" key_pressed ; then 
-        loop_count=0
-        
-        # 1. Echo the keystroke to STDOUT so the command substitution captures it
-        if [[ "${ECHO_CHAR}" -eq 1 ]]; then 
-            printf '%s' "${key_pressed}"
-        fi
 
-        # 2. Redirect UI feedback to STDERR so the user sees it immediately
-        if [[ -n ${RETURN_TEXT} ]]; then 
-            # Added >&2 to ensure this prints to the terminal, not the variable
-            printf '\r\n%s\n' "${RETURN_TEXT}" >&2
-        else
-            printf '\n' >&2
+    read -rsn1 -t p "${DEFAULT_PROMPT}" 0.1 key_pressed >&2 ; status=$?
+        case "${key_pressed}" in
+            $'\e') read -rsn5 ;; # Ignore special keys
+            [[:print:]]|""|" ") 
+                # checks for any printable keys, space and Enter      
+                if [[ ${status} -eq 0 ]]; then 
+                    loop_count=0; 
+                    if [[ "${ECHO_CHAR}" -eq 1 ]]; then 
+                        printf '%s' "${key_pressed}"; 
+                    fi
+                fi
+        esac
+
+    if (( $(date "+%s") - start_time >= 1 )); then
+        loop_count=$((loop_count - 1))
+        start_time=$(date "+%s") 
+        
+        if [ "${quiet_mode}" -eq 0 ]; then 
+            printf '\r'
+            display_time "${loop_count}"
+            printf '^s' "${text_prompt}"
         fi
-        exit 0
     fi
+    if [[ -n ${return_prompt} ]]; then 
+        pass_to_stderr "\r\n${return_prompt}"
+    fi
+    exit 0
 
 elif [[ ${QUIET_MODE} -eq 0 && ${TIMER} -gt 0 ]]; then
     printf "\e[?25l" # hide cursor
