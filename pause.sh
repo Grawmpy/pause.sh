@@ -224,7 +224,7 @@ countdown() {
         read -rsn1 -t 0.1 key_pressed ; status=$?
         case "${key_pressed}" in
                 $'\e') read -rsn5 ;; # Ignore special keys
-                [[:print:]])            
+                [[:print:]]|""|" ")            
                     if [[ ${status} -eq 0 ]]; then 
                         loop_count=0; 
                         if [[ "${ECHO_CHAR}" -eq 1 ]]; then 
