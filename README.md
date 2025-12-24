@@ -19,18 +19,19 @@ The interface features a Hierarchical Time Display that dynamically manages its 
 Security Hardening & Input Sanitization
 
 The utility is architected for Execution Isolation and Environment Integrity:
-    Mandatory TTY Validation: Starting in Version 6, the script enforces Interactive TTY Session Residency, rejecting piped or non-seekable streams to prevent unauthorized side-channel manipulation.
-    Escape Sequence Neutralization: All string-based arguments (Prompt and Response) undergo Recursive Sanitization. The utility literalizes all ASCII control characters (0-31, 127) and explicitly strips the ESC (\x1b) character to mitigate Terminal
-    Escape Injection (TEI) vulnerabilities.
-    Atomic Character Capture: Input is captured in a Non-Canonical Raw Mode, ensuring special keys or escape sequences cannot be leveraged for command injection.
+
+   Mandatory TTY Validation: Starting in Version 6, the script enforces Interactive TTY Session Residency, rejecting piped or non-seekable streams to prevent unauthorized side-channel manipulation.
+   Escape Sequence Neutralization: All string-based arguments (Prompt and Response) undergo Recursive Sanitization. The utility literalizes all ASCII control characters (0-31, 127) and explicitly strips the ESC (\x1b) character to mitigate Terminal
+   Escape Injection (TEI) vulnerabilities.
+   Atomic Character Capture: Input is captured in a Non-Canonical Raw Mode, ensuring special keys or escape sequences cannot be leveraged for command injection.
 
 CLI Configuration and Output Stream Management
 
 Quiet Mode (-q): Provides Visual Suppression, decoupling the process pause from terminal output for "silent" operations. In v6, this has been refactored for Standalone Orthogonality, removing the legacy timer dependency.
-    Stream Routing:
-        Prompt/Response (-p, -r): These strings are directed to STDERR, ensuring that user-facing instructions do not interfere with data being processed on the primary output stream.
-        Echo Toggle (-e): Enables Standard Output (STDOUT) Redirection, allowing for Atomic Command Substitution. This feature enables the utility to populate parent-shell variables during execution—a functionality gap identified in legacy DOS/Windows
-        environments.
+   Stream Routing:
+       Prompt/Response (-p, -r): These strings are directed to STDERR, ensuring that user-facing instructions do not interfere with data being processed on the primary output stream.
+       Echo Toggle (-e): Enables Standard Output (STDOUT) Redirection, allowing for Atomic Command Substitution. This feature enables the utility to populate parent-shell variables during execution—a functionality gap identified in legacy DOS/Windows
+       environments.
 
 Architectural Philosophy: Dependency-Free Shell Native
 
