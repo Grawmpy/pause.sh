@@ -37,40 +37,48 @@ Architectural Philosophy: Dependency-Free Shell Native
 
     Designed as an Environment-Agnostic Utility, the script is written exclusively using Bash Built-in Primitives. This ensures Zero-Dependency Portability and maximum performance across all POSIX-compliant environments, making it immune to variations in host binary toolsets (such as GNU Coreutils) and ensuring high-speed execution with Zero Subshell Latency.
 
-    Usage:
-        $ ./pause.sh [-p|--prompt ] [-t|--timer ] [-r|--response ] [-h|--help] [-q|--quiet ] 
-
-        -p, --prompt    [ text string required (string must be in quotes)  ]
-        -t, --timer     [ number of seconds ]
-        -r, --response  [ text string required (string must be in quotes)  ]
-        -h, --help      [ help information ]
-        -q, --quiet     [ quiets text, requires timer be set. ]
-        -e, --echo      [ echoes the key pressed to stdout ]
+      Usage:
+      $ ./pause.sh [-e, --echo] [-h|--help] [-p|--prompt "<TEXT>"] [-q|--quiet ] [-r|--response "<TEXT>"]  [-t|--timer <SECONDS>] [-v, --version] 
+      
+      -e, --echo      
+         echoes the key presse. Directed to STDOUT 
+      -h, --help 
+         help information 
+      -q, --quiet     
+         quiets all prompt text, (v.5 requires timer be set.) 
+      -p, --prompt  
+         text string required (string must be in quotes). Directed to STDERR
+      -r, --response  
+         text string required (string must be in quotes). Directed to STDERR 
+      -t, --timer 
+         delay in total number of seconds
+      -v. --version
+         Current version
     
-        Examples:
-        Input:  $ pause.sh
-        Output: $ Press [Enter] to continue...
-                $
-        
-        Input:  $ pause.sh --timer <seconds>
-        Output: $ [timer] Press [Enter] to continue...
-                $
-        
-        Input:  $ pause.sh --prompt "Optional Prompt" --response "Your response"
-        Output: $ Optional Prompt
-                $ Your Response
-                $
-        
-        Input:  $ pause.sh -p "Optional Prompt" -r "[ Your response ]" -t <seconds>
-        Output: $ [timer] Optional Prompt
-                $ [ Your Response ]
-                $
-        [format of time will be 00:00:00]
-        
-        Input:  $ pause.sh -e
-        Output: $ Press [Enter] to continue... (Presses "j" key}
-                $ j
-                $
+      Examples:
+      Input:  $ pause.sh
+      Output: $ Press [Enter] to continue...
+             $
+      
+      Input:  $ pause.sh --timer <seconds>
+      Output: $ [timer] Press [Enter] to continue...
+             $
+      
+      Input:  $ pause.sh --prompt "Optional Prompt" --response "Your response"
+      Output: $ Optional Prompt
+             $ Your Response
+             $
+      
+      Input:  $ pause.sh -p "Optional Prompt" -r "[ Your response ]" -t <seconds>
+      Output: $ [timer] Optional Prompt
+             $ [ Your Response ]
+             $
+      [format of time will be 00:00:00]
+      
+      Input:  $ pause.sh -e
+      Output: $ Press [Enter] to continue... (Presses "j" key}
+             $ j
+             $
         
     
         Note: quiet mode (-q|--quiet) will hide all output except response (-r|--response) text, 
