@@ -22,7 +22,8 @@
 #  -r, --response      
 #       Directed to STDERR (>&2). TEXT must be inside double quotes
 #  -t , --timer        
-#       NUMBER must be in total seconds.
+#       NUMBER must be in total seconds. Uses monotonic comparison [ ${SECONDS} ] 
+#       giving zero software lag time over extended periods.
 #  -q, --quiet                 
 #       Quiets the prompt, sets to NULL. Overrides any -p, --prompt setting.
 #  -e, --echo
@@ -137,7 +138,8 @@ Usage:
 -r, --response
     Outputs to STDERR. Response text must be inside quotes, 
 -t, --timer    
-    NUMBER is total seconds (only) for delay.
+    SECONDS is total seconds for delay. Uses monotonic comparison for zero lag time
+    over extended periods.
 -v, --version
     Current version
 ${cr}
@@ -172,14 +174,13 @@ while getopts ":ehp:qr:t:v" OPTION; do
             fi 
             ;;
 
-        t)  
-            if [ -n "${OPTARG}" ]; then
-                TIMER="${OPTARG}"
-            elif [[ ! "${OPTARG}" =~ ^[0-9]+$ ]]; then
-                error_exit "Timer must be a non-negative integer."
-            else
-                error_exit "Timer value must be provided."
-            fi 
+        t)  if [[ -n "${OPTARG}" ]] ; then
+                if [[ "${OPTARG}" =~ ^[0-9]+$ ]]; then
+                    TIMER="${OPTARG}"
+                else
+                    error_exit "Timer value [${OPTARG}] must be a non-negative integer."
+                fi 
+            fi
             ;;
 
         v)  printf '%s v.%s\n' "${SCRIPT}" "${VERSION}" ; exit 0 # Script and version number
@@ -201,29 +202,32 @@ display_time() {
     
     # Calculate time components
     local years=$(( total_seconds / 31536000 ))
-    local months=$(( (total_seconds % 31536000) / 2592000 ))
-    local days=$(( (total_seconds % 2592000) / 86400 ))
-    local hours=$(( (total_seconds % 86400) / 3600 ))
-    local minutes=$(( (total_seconds % 3600) / 60 ))
+    local months=$(( (total_seconds / 2592000) % 12 ))
+    local days=$(( (total_seconds / 86400) % 30 ))
+    local hours=$(( (total_seconds / 3600) % 24 ))
+    local minutes=$(( (total_seconds / 60) % 60 ))
     local seconds=$(( total_seconds % 60 ))
 
     # Output format
+    # Output format
     printf '['
-    [[ ${years} -gt 0 || ${active} == "true" ]] && { _output+="$(printf '%02dyr:' "${years}")"; active="true"; }
-    [[ ${months} -gt 0 || ${active} == "true" ]] && { _output+="$(printf '%02dmn:' "${months}")"; active="true"; }
-    [[ ${days} -gt 0 || ${active} == "true" ]] && { _output+="$(printf '%02ddy:' "${days}")"; active="true"; }
-    [[ ${hours} -gt 0 || ${active} == "true" ]] && { _output+="$(printf '%02d:' "${hours}")"; active="true"; }
-    [[ ${minutes} -gt 0 || ${active} == "true" ]] && { _output+="$(printf '%02d:' "${minutes}")"; active="true"; }
+    # Use a local string to build the output to avoid printf glitches
+    [[ ${years} -gt 0 ]] && { printf '%02dyr:' "${years}"; active="true"; }
+    [[ ${months} -gt 0 || ${active} == "true" ]] && { printf '%02dmn:' "${months}"; active="true"; }
+    [[ ${days} -gt 0 || ${active} == "true" ]] && { printf '%02ddy:' "${days}"; active="true"; }
+    [[ ${hours} -gt 0 || ${active} == "true" ]] && { printf '%02d:' "${hours}"; active="true"; }
+    [[ ${minutes} -gt 0 || ${active} == "true" ]] && { printf '%02d:' "${minutes}"; active="true"; }
     printf '%02d]' "${seconds}"
 }
 
 # Countdown timer function
 countdown() {
+    SECONDS=0
     local loop_count="$1"
     local text_prompt="$2"
     local return_prompt="$3"
     local start_time
-    start_time=$(date "+%s") 
+    start_time=${SECONDS} 
     
     # Hide cursor only if NOT in quiet mode (per your preference)
     [[ ${QUIET_MODE} -eq 0 ]] && printf "\e[?25l"
@@ -246,9 +250,9 @@ countdown() {
         fi
 
         # Update display every 1 second
-        if (( $(date "+%s") - start_time >= 1 )); then
+        if (( SECONDS - start_time >= 1 )); then
             loop_count=$((loop_count - 1))
-            start_time=$(date "+%s") 
+            start_time=${SECONDS} 
             
             if [[ ${QUIET_MODE} -eq 0 ]]; then 
                 printf '\r'
