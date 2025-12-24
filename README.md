@@ -29,9 +29,9 @@ CLI Configuration and Output Stream Management
 
 Quiet Mode (-q): Provides Visual Suppression, decoupling the process pause from terminal output for "silent" operations. In v6, this has been refactored for Standalone Orthogonality, removing the legacy timer dependency.
    Stream Routing:
-       Prompt/Response (-p, -r): These strings are directed to STDERR, ensuring that user-facing instructions do not interfere with data being processed on the primary output stream.
-       Echo Toggle (-e): Enables Standard Output (STDOUT) Redirection, allowing for Atomic Command Substitution. This feature enables the utility to populate parent-shell variables during execution—a functionality gap identified in legacy DOS/Windows
-       environments.
+      Prompt/Response (-p, -r): These strings are directed to STDERR, ensuring that user-facing instructions do not interfere with data being processed on the primary output stream.
+      Echo Toggle (-e): Enables Standard Output (STDOUT) Redirection, allowing for Atomic Command Substitution. This feature enables the utility to populate parent-shell variables during execution—a functionality gap identified in legacy DOS/Windows
+      environments.
 
 Architectural Philosophy: Dependency-Free Shell Native
 
@@ -48,27 +48,27 @@ Architectural Philosophy: Dependency-Free Shell Native
         -e, --echo      [ echoes the key pressed to stdout ]
     
         Examples:
-        Input:  $ ./pause.sh
-        Output: $ Press any key to continue...
+        Input:  $ pause.sh
+        Output: $ Press [Enter] to continue...
                 $
         
-        Input:  $ ./pause.sh --timer <seconds>
-        Output: $ [timer] Press any key to continue...
+        Input:  $ pause.sh --timer <seconds>
+        Output: $ [timer] Press [Enter] to continue...
                 $
         
-        Input:  $ ./pause --prompt "Optional Prompt" --response "Your response"
+        Input:  $ pause.sh --prompt "Optional Prompt" --response "Your response"
         Output: $ Optional Prompt
                 $ Your Response
                 $
         
-        Input:  $ ./pause -p "Optional Prompt" -r "[ Your response ]" -t <seconds>
+        Input:  $ pause.sh -p "Optional Prompt" -r "[ Your response ]" -t <seconds>
         Output: $ [timer] Optional Prompt
                 $ [ Your Response ]
                 $
         [format of time will be 00:00:00]
         
-        Input:  $ ./pause -e
-        Output: $ Press any key to continue... (Presses "j" key}
+        Input:  $ pause.sh -e
+        Output: $ Press [Enter] to continue... (Presses "j" key}
                 $ j
                 $
         
