@@ -237,13 +237,11 @@ fi
 #   so it never jumps backwards when the system clock is changed.
 # ------------------------------------------------------------
 monotonic_epoch_ms() {
-    # ---------- 1. Wall‑clock (seconds → nanoseconds) ----------
-    # `date +%s` is universally available.
-    #shellcheck disable=2155
+    # ---------- Wall‑clock (seconds → nanoseconds) ----------
     local secs=$(date +%s)  # e.g. 1703821234
     local wall_ns=$(( secs * 1000000000 )) # nanoseconds since 1970‑01‑01
 
-    # ---------- 2. Monotonic clock (nanoseconds since boot) ----------
+    # ---------- Monotonic clock (nanoseconds since boot) ----------
     # Use Perl (available on virtually every Unix).  If you prefer Python,
     # replace the line with the commented Python alternative.
     local mono_ns
@@ -251,16 +249,16 @@ monotonic_epoch_ms() {
     # Python alternative (uncomment if you have python3 but not perl):
     # mono_ns=$(python3 -c 'import time,sys; sys.stdout.write(str(int(time.monotonic()*1e9)))')
 
-    # ---------- 3. Constant offset: wall – monotonic ----------
+    # ---------- Constant offset: wall – monotonic ----------
     local offset_ns=$(( wall_ns - mono_ns ))
 
-    # ---------- 4. Current monotonic time again ----------
+    # ---------- Current monotonic time again ----------
     local now_mono_ns
     now_mono_ns=$(perl -MTime::HiRes -e 'printf "%d", Time::HiRes::clock_gettime(1)*1000000000')
     # Python alternative:
     # now_mono_ns=$(python3 -c 'import time,sys; sys.stdout.write(str(int(time.monotonic()*1e9)))')
 
-    # ---------- 5. Convert nanoseconds → milliseconds ----------
+    # ---------- Convert nanoseconds → milliseconds ----------
     printf '%d' $(( (now_mono_ns + offset_ns) / 1000000 ))
 }
 
