@@ -6,6 +6,8 @@
 #  Version: 6.0.1
 #  Author: Grawmpy (CSPhelps) <grawmpy@gmail.com>
 #
+# Created: 2025-12-27 23:28:02Z
+#
 #  Description: This script allows for the interruption of the current process until either the
 #  option timer is set and reaches [00], or the user presses any alphanumeric, [Enter], or [Space] 
 #  keys. If no timer is used, the process will be stopped indefinitely until the user continues 
@@ -22,14 +24,29 @@
 #  -r, --response      
 #       Directed to STDERR (>&2). TEXT must be inside double quotes
 #  -t , --timer        
-#       NUMBER must be in total seconds. Uses monotonic comparison [ ${SECONDS} ] 
-#       giving zero software lag time over extended periods.
+#       NUMBER must be in total seconds.
 #  -q, --quiet                 
 #       Quiets the prompt, sets to NULL. Overrides any -p, --prompt setting.
 #  -e, --echo
 #       Directed to STDOUT. Using simple command substitution the key pressed is echoed 
 #  -v, --version
 #       Version of this script
+#
+#  How it works
+#  ------------
+#  * The script reads the kernel’s monotonic clock (CLOCK_MONOTONIC) via
+#    system boot and never goes backwards.
+#  * Each loop iteration records the current monotonic value, subtracts the
+#    value taken at the start of the previous second, and checks whether
+#    at least 1 000 ms have elapsed.
+#  * Because the comparison uses only monotonic values, the timer cannot
+#    lose or gain time due to wall‑clock adjustments.
+#
+#  Result
+#  -------
+#  The countdown finishes after exactly the number of seconds you asked
+#  for, with sub‑millisecond precision, regardless of system‑time changes.
+#
 #
 #  Copyright (C) 2025 Grawmpy (CSPhelps) <grawmpy@gmail.com>
 #  This software is licensed under the GNU General Public License (GPL) version 3.0 only.
@@ -64,7 +81,7 @@ trap 'printf "\e[?25h\n"; exit 1' SIGINT SIGTERM
 # set global variables
 PROMPT_TEXT="Press [Enter] to continue..."
 SCRIPT="${0##*/}" # script name
-RETURN_TEXT=""
+RETURN_TEXT="" 
 TIMER=0
 QUIET_MODE=0
 ECHO_CHAR=0
@@ -74,8 +91,7 @@ VERSION="6.0.1"
 COPYRIGHT="Copyright (c) 2025 Grawmpy (CSPhelps) <grawmpy@gmail.com>
 This software is licensed under the GNU General Public License (GPL) 
 version 3.0 only."
-DESCRIPTION="A simple script that interrupts the current process until user presses \
-any alphanumeric key, [Space], [Enter], or optional timer reaches [00]."
+DESCRIPTION=$(printf '%s\n%s' "A simple script that interrupts the current process until user presses" "any alphanumeric key, [Space], [Enter], or optional timer reaches [00].")
 
 # This Bash parameter expansion removes control characters (ASCII 0-31 and 127)
 # as well as the ESC character itself (ASCII 27).
@@ -118,30 +134,48 @@ cr=$(printf '\n')
 
 HELP_TEXT="$(cat <<helpText 
 ${SCRIPT} v.${VERSION}
-
-${COPYRIGHT} 
-${DESCRIPTION}
-
+${cr}
+Copyright: ${COPYRIGHT} 
+Description: ${DESCRIPTION}
+${cr}
 Command: ${SCRIPT}
 Options: [-e|--echo ] [-h|--help] [-p|--prompt "<TEXT>"] [-q|--quiet] 
          [-r|--response "<TEXT>"] [-t|--timer <NUMBER>] [-v, --version]
-
+${cr}
 Usage: 
 -e, --echo
-    Outputs to STDOUT. Without prompt option this will assume a null -p, --prompt value
+    Outputs to STDOUT. Will assume default prompt: Press [Enter] to continue...
 -h, --help
     This text
 -p, --prompt  
-    Outputs to STDERR. Prompt text must be inside quotes. 
+    Outputs to STDERR. Changes the default prompt TEXT must be inside quotes. 
 -q, --quiet
     Quiets the prompt, sets to [Space]. Overrides -p, --prompt setting.
 -r, --response
-    Outputs to STDERR. Response text must be inside quotes, 
+    Outputs to STDERR. Adds response text after continueing process. TEXT must be inside quotes, 
 -t, --timer    
-    SECONDS is total seconds for delay. Uses monotonic comparison for zero lag time
-    over extended periods.
+    SECONDS is total seconds for delay. Uses monotonic clock for zero lag time
+    eveen over extended periods. 
 -v, --version
     Current version
+${cr}
+    Note: A monotonic clock is a timer that always moves forward at a constant rate 
+        and never jumps backward. When you read the system clock you get the number 
+        of seconds that have elapsed since the system boot, independent of any changes 
+        to the wall-clock [like the calendar time you get from \$(date) can vary and
+        lose or gain time].
+        * The script reads the kernel's monotonic clock (CLOCK_MONOTONIC) via
+          a tiny Perl/Python helper.  This clock counts nanoseconds since the
+          system boot and never goes backwards.
+        * Each loop iteration records the current monotonic value, subtracts the
+          value taken at the start of the previous second, and checks whether
+          at least 1000ms have elapsed.
+        * Because the comparison uses only monotonic values, the timer cannot
+          lose or gain time due to wall-clock adjustments.
+
+        Result:
+        The countdown finishes after exactly the number of seconds you asked
+        for, with sub-millisecond precision, regardless of system-time changes.
 ${cr}
 helpText
 )"
@@ -196,6 +230,40 @@ if [[ $# -gt 0 ]]; then
     error_exit "Unexpected positional parameters detected. Use ${SCRIPT} -h or --help for help for parameters."
 fi
 
+# ------------------------------------------------------------
+# monotonic_epoch_ms
+#   Returns the current time as **milliseconds since the Unix epoch**
+#   but the value is derived from the kernel’s monotonic clock,
+#   so it never jumps backwards when the system clock is changed.
+# ------------------------------------------------------------
+monotonic_epoch_ms() {
+    # ---------- 1. Wall‑clock (seconds → nanoseconds) ----------
+    # `date +%s` is universally available.
+    #shellcheck disable=2155
+    local secs=$(date +%s)  # e.g. 1703821234
+    local wall_ns=$(( secs * 1000000000 )) # nanoseconds since 1970‑01‑01
+
+    # ---------- 2. Monotonic clock (nanoseconds since boot) ----------
+    # Use Perl (available on virtually every Unix).  If you prefer Python,
+    # replace the line with the commented Python alternative.
+    local mono_ns
+    mono_ns=$(perl -MTime::HiRes -e 'printf "%d", Time::HiRes::clock_gettime(1)*1000000000')
+    # Python alternative (uncomment if you have python3 but not perl):
+    # mono_ns=$(python3 -c 'import time,sys; sys.stdout.write(str(int(time.monotonic()*1e9)))')
+
+    # ---------- 3. Constant offset: wall – monotonic ----------
+    local offset_ns=$(( wall_ns - mono_ns ))
+
+    # ---------- 4. Current monotonic time again ----------
+    local now_mono_ns
+    now_mono_ns=$(perl -MTime::HiRes -e 'printf "%d", Time::HiRes::clock_gettime(1)*1000000000')
+    # Python alternative:
+    # now_mono_ns=$(python3 -c 'import time,sys; sys.stdout.write(str(int(time.monotonic()*1e9)))')
+
+    # ---------- 5. Convert nanoseconds → milliseconds ----------
+    printf '%d' $(( (now_mono_ns + offset_ns) / 1000000 ))
+}
+
 # Function to display the remaining time in the desired format
 display_time() {
     local total_seconds="$1"
@@ -212,11 +280,11 @@ display_time() {
     # Output format
     printf '['
     # Use a local string to build the output to avoid printf glitches
-    [[ ${years} -gt 0 ]] && { printf '%02dyr:' "${years}"; active="true"; }
-    [[ ${months} -gt 0 || ${active} == "true" ]] && { printf '%02dmn:' "${months}"; active="true"; }
-    [[ ${days} -gt 0 || ${active} == "true" ]] && { printf '%02ddy:' "${days}"; active="true"; }
-    [[ ${hours} -gt 0 || ${active} == "true" ]] && { printf '%02d:' "${hours}"; active="true"; }
-    [[ ${minutes} -gt 0 || ${active} == "true" ]] && { printf '%02d:' "${minutes}"; active="true"; }
+    [[ ${years} -gt 0 ]] && { printf '%02dyr:' "${years}"; }
+    [[ ${years} -gt 0 || ${months} -gt 0 ]] && { printf '%02dmn:' "${months}"; }
+    [[ ${years} -gt 0 || ${months} -gt 0 || ${days} -gt 0 ]] && { printf '%02ddy:' "${days}"; }
+    [[ ${years} -gt 0 || ${months} -gt 0 || ${days} -gt 0 || ${hours} -gt 0 ]] && { printf '%02d:' "${hours}"; }
+    [[ ${years} -gt 0 || ${months} -gt 0 || ${days} -gt 0 || ${hours} -gt 0 || "${minutes}" -gt 0 ]] && { printf '%02d:' "${minutes}" ; }
     printf '%02d]' "${seconds}"
 }
 
@@ -226,9 +294,11 @@ countdown() {
     local loop_count="$1"
     local text_prompt="$2"
     local return_prompt="$3"
-    local start_time
-    start_time=${SECONDS} 
-    
+    local starting_milsecs now_milsecs
+    # Compatible with Bash 3.x and up
+    # Using 10# forces decimal to prevent "octal" errors with leading zeros
+    starting_milsecs=$(monotonic_epoch_ms)
+
     # Hide cursor only if NOT in quiet mode (per your preference)
     [[ ${QUIET_MODE} -eq 0 ]] && printf "\e[?25l"
 
@@ -239,27 +309,40 @@ countdown() {
     fi
     
     while (( loop_count > 0 )); do
-        read -rsn1 -t 0.1 key_pressed
+    
+        read -rsn1 -t 0.001 key_pressed
         status=$?
         
-        # Handle keypress
-        if [[ ${status} -eq 0 ]]; then
-            [[ "${ECHO_CHAR}" -eq 1 ]] && printf '%s' "${key_pressed}"
-            loop_count=0
-            break
-        fi
-
-        # Update display every 1 second
-        if (( SECONDS - start_time >= 1 )); then
-            loop_count=$((loop_count - 1))
-            start_time=${SECONDS} 
+        case $key_pressed in
+            $'\e'*)
+            # Capture up to 4 remaining bytes of the sequence immediately 
+            # so they don't leak into the next loop iteration or command.
+            read -rsn4 -t 0.001
             
-            if [[ ${QUIET_MODE} -eq 0 ]]; then 
-                printf '\r'
-                display_time "${loop_count}"
-                printf ' %s' "${text_prompt}"
-            fi
-        fi
+            # Nullify the original key variable
+            key_pressed="" 
+            ;;
+            [[:alnum:]]|""|" ") 
+                    # Handle keypress
+                if [[ ${status} -eq 0 ]]; then
+                    [[ "${ECHO_CHAR}" -eq 1 ]] && printf '%s' "${key_pressed}"
+                    loop_count=0
+                    break
+                fi
+
+                now_milsecs=$(monotonic_epoch_ms)
+                # Update display every 1 second
+                    if [ $(( now_milsecs - starting_milsecs )) -ge 1000 ]; then
+                    loop_count=$((loop_count - 1))
+                    starting_milsecs=${now_milsecs}
+                        if [[ ${QUIET_MODE} -eq 0 ]]; then 
+                            printf '\r'
+                            display_time "${loop_count}"
+                            printf ' %s' "${text_prompt}"
+                        fi
+                    fi
+                ;;
+            esac
     done
     
     # Restore cursor
