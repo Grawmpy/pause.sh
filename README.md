@@ -2,86 +2,153 @@
 
 Current release: https://github.com/Grawmpy/pause.sh/releases
 
-This utility is a high-precision synchronous process interrupter designed for secure Linux environments. It features Monotonic Timing Accuracy via internal shell parameters to eliminate cumulative drift during extended countdowns. Security is maintained through Mandatory TTY Validation and Strict Input Sanitization, which renders all incoming ANSI escape sequences as literals, mitigating potential side-channel attacks on the host terminal session. It is a high-precision synchronous process interrupter designed for secure Linux environments. It features Monotonic Timing Accuracy via internal shell parameters to eliminate cumulative drift during extended countdowns. Security is maintained through Mandatory TTY Validation and Strict Input Sanitization, which renders all incoming ANSI escape sequences as literals, mitigating potential side-channel attacks on the host terminal session.
+This utility is a high-precision synchronous process  interrupter  designed  for
+secure Linux environments. It features Monotonic Timing  Accuracy  via  internal
+shell parameters to  eliminate  cumulative  drift  during  extended  countdowns.
+Security is  maintained  through  Mandatory  TTY  Validation  and  Strict  Input
+Sanitization, which renders all incoming  ANSI  escape  sequences  as  literals,
+mitigating potential side-channel attacks on the host terminal session.
 
 Core Functionality: Asynchronous Event Handling
 
-The utility operates as a Synchronous Blocking Process, suspending the parent thread until termination criteria are met. Execution resumes upon the detection of a Non-Escape Character Input (Alphanumeric, Space, or Carriage Return) or the expiration of the optional Monotonic Countdown Timer.
+The utility operates as a Synchronous Blocking Process,  suspending  the  parent
+thread until termination criteria are met. Execution resumes upon the  detection
+of a Non-Escape Character Input  (defined  via  the  -a  whitelist  or  standard
+Alphanumeric/Space/Return) or the expiration of the optional Monotonic Countdown
+Timer. New Feature: Granular ANSI Color Customization (-C)
 
-Precision Timing: Monotonic Clock Implementation
+Version 7.1 introduces a  Tri-Zone  ANSI  Rendering  Engine.  Users  can  define
+distinct visual attributes for the Prompt, Timer, and Response strings  using  a
+compact tokenized syntax:
 
-To ensure high-fidelity temporal accuracy, the utility utilizes a Monotonic Reference Counter. By calculating elapsed time via internal shell state variables rather than standard system clock calls, the script eliminates cumulative drift and fork-exec overhead. This architecture guarantees Zero-Lag Synchronization over extended durations (exceeding 24 hours), remaining resilient against system clock shifts or NTP adjustments.
+    * Targeting: p (Prompt), t (Timer), and r (Response).
+    * Attributes: Bold (1), Underline (4), or Blink (5).
+    * Spectrum: 8-bit color mapping (Green, Yellow, Blue, Magenta, Cyan,  White,
+      Red).
+    * Urgent Thresholding (-u): Integrates with the Timer  logic  to  trigger  a
+      State-Change Alert,  automatically transitioning the display  to Bold  Red 
+      when the countdown falls below a user-defined second threshold.
 
-Dynamic Visual Interface
+New Feature: Persistent Audit Logging (-l)
 
-The interface features a Hierarchical Time Display that dynamically manages its footprint. The countdown utilizes a context-aware [YY:MM:DD:HH:MM:SS] format, where higher-order time units automatically undergo Visual Pruning (hiding) as they reach zero, culminating in a minimalist [SS] final state.
+For automated environments, the utility  now  supports  Atomic  Stream  Mirrored
+Logging. Using the -l flag, the process generates a persistent  audit  trail  of
+start times,  termination  triggers  (key-press  vs.  timeout),  and  diagnostic
+heartbeats. The utility includes Recursive Directory Provisioning, automatically
+creating the necessary path hierarchy for log residency.
 
-Security Hardening & Input Sanitization
+New Feature: Input Whitelisting & Case Sensitivity (-a, -c)
 
-The utility is architected for Execution Isolation and Environment Integrity:
+    Key Whitelisting: The -a  flag  enforces  Input  Restriction,  ignoring  all
+    keystrokes except those explicitly defined in the allowed  character  array.
+    Case Orthogonality: By default,  input  is  case-sensitive.  The  -c  toggle
+    enables  Normalized  Comparison,  allowing  lowercase  inputs   to   satisfy
+    uppercase requirements, essential for high-speed data entry environments.
 
-   Mandatory TTY Validation: Starting in Version 6, the script enforces Interactive TTY Session Residency, rejecting piped or non-seekable streams to prevent unauthorized side-channel manipulation.
-   Escape Sequence Neutralization: All string-based arguments (Prompt and Response) undergo Recursive Sanitization. The utility literalizes all ASCII control characters (0-31, 127) and explicitly strips the ESC (\x1b) character to mitigate Terminal
-   Escape Injection (TEI) vulnerabilities.
-   Atomic Character Capture: Input is captured in a Non-Canonical Raw Mode, ensuring special keys or escape sequences cannot be leveraged for command injection.
+Security Hardening & Diagnostic Extension (-x)
 
-CLI Configuration and Output Stream Management
+    Diagnostic Mode (-x): Enables Verbose State-Tracking.  Diagnostic  messages,
+    including TTY status, sanitized string length, and clock-drift  corrections,
+    are routed  to  STDERR  or  the  defined  log  file  to  ensure  operational
+    transparency without polluting the primary STDOUT pipe.
 
-Quiet Mode (-q): Provides Visual Suppression, decoupling the process pause from terminal output for "silent" operations. In v6, this has been refactored for Standalone Orthogonality, removing the legacy timer dependency.
-   Stream Routing:
-      Prompt/Response (-p, -r): These strings are directed to STDERR, ensuring that user-facing instructions do not interfere with data being processed on the primary output stream.
-      Echo Toggle (-e): Enables Standard Output (STDOUT) Redirection, allowing for Atomic Command Substitution. This feature enables the utility to populate parent-shell variables during execution—a functionality gap identified in legacy DOS/Windows
-      environments.
+    Escape Sequence Neutralization: All  string-based  arguments  undergo  Recursive
+    Sanitization.  The  utility  literalizes  all  ASCII  control   characters   and
+    explicitly strips the ESC (\x1b) character to mitigate Terminal Escape Injection
+    (TEI) vulnerabilities.
 
-Architectural Philosophy: Dependency-Free Shell Native
+CLI Flag Reference
 
-    Designed as an Environment-Agnostic Utility, the script is written exclusively using Bash Built-in Primitives. This ensures Zero-Dependency Portability and maximum performance across all POSIX-compliant environments, making it immune to variations in host binary toolsets (such as GNU Coreutils) and ensuring high-speed execution with Zero Subshell Latency.
+    -a, --allowed   CHARS: Define an allowed list of specific keys.
+    -C, --color     Enable colors (use --help-color for details).
+    -c, --case      Force case-insensitive key matching.
+    -d, --default   CHAR: Set default key for timer expiration.
+    -e, --echo      Print selected key to STDOUT.
+    -h, --help      Show this help text.
+    -l, --log       PATH: Write logs to specified path.
+    -p, --prompt    TEXT: Prompt text displayed to STDERR.
+    -q, --quiet     Suppress all STDERR except response.
+    -r, --response  TEXT: Response text printed to STDERR.
+    -t, --timer     SECONDS: Set countdown duration.
+    -u, --urgent    SECONDS: Set threshold for red timer alert.
+    -v, --version   Show version.
+    -x, --extend    Enable diagnostic messages to STDERR/Log.
 
+Granular Interface Customization: The -C Logic Engine
+
+The utility implements a Positional Token Parser for visual styling. The -C flag
+accepts a composite string  that  defines  the  aesthetics  for  three  distinct
+interface zones. Each customization token follows  a  [Target][Attribute][Color]
+schema.
+
+    1. Target Identifiers
+
+        p : Primary Prompt (The instruction text).
+        t : Countdown Timer (The clock display).
+        r : Key Response (The character echo upon termination).
+
+    2. Attribute Mapping
+
+        1 : Bold (High Intensity)
+        4 : Underline
+        5 : Blink (Terminal-emulator dependent)
+        0 : Normal (Standard weight)
+
+    3. Color Spectrum (ANSI Foreground)
+    Code	Color	 |   Code	Color
+    2	    Green	 |   6	    Cyan
+    3	    Yellow	 |   7	    White
+    4	    Blue	 |   8	    Red
+    5	    Magenta	 |	
+
+Example Tokenization:
+
+    -C p14 : Sets Prompt to Bold Blue.
+    -C t18r12 : Sets Timer to Bold Red and Response to Bold Green.
+    -C h : Invokes the internal Attribute Map for real-time reference.
+
+Default Configuration:
+
+If the -C flag  is  invoked  without  arguments,  the  utility  initializes  the
+Standard Tactical Profile: p14 (Bold Blue Prompt), t18 (Bold Red Timer), and r12
+(Bold Green Response).
+
+HELP TEXT:
+
+      Copyright (C) 2025 Grawmpy (CSPhelps) <grawmpy@gmail.com> GNU Public License GPL
+      3.0.
+
+      This script [pause] interrupts the current process until either a  countdown
+      timer reaches zero or the user presses any alphanumeric key, Enter, or Space. If
+      no timer is  specified,  the  process  remains  interrupted  indefinitely  until
+      resumed by a key press. When a timer (total seconds) is  provided,  the  process
+      resumes automatically without user interaction.
+      
       Usage:
-      $ ./pause.sh [-e, --echo] [-h|--help] [-p|--prompt "<TEXT>"] [-q|--quiet ] [-r|--response "<TEXT>"]  [-t|--timer <SECONDS>] [-v, --version] 
+      pause [-a, --allowed CHAR] [-C, --color[target][attribute][color]] 
+      [-c, --case] [-d, --default CHAR] [-e, --echo] [-h, --help] [-l, --log PATH] 
+      [-p. --prompt TEXT] [-q, --quiet] [-r, --response TEXT] [-t, --timer SECONDS] 
+      [-u, --urgent SECONDS] [-v, --version] [-x, --extend]
       
-      -e, --echo      
-         echoes the key presse. Directed to STDOUT 
-      -h, --help 
-         help information 
-      -q, --quiet     
-         quiets all prompt text, (v.5 requires timer be set.) 
-      -p, --prompt  
-         text string required (string must be in quotes). Directed to STDERR
-      -r, --response  
-         text string required (string must be in quotes). Directed to STDERR 
-      -t, --timer 
-         delay in total number of seconds
-      -v. --version
-         Current version
-    
-      Examples:
-      Input:  $ pause.sh
-      Output: $ Press [Enter] to continue...
-             $
+      Options:
+      -a, --allowed   CHARS: Define an allowed list of specific keys.
+      -C, --color     Enable colors (use --help-color for details).
+      -c, --case      Force case-insensitive key matching.
+      -d, --default   CHAR: Set default key for timer expiration.
+      -e, --echo      Print selected key to STDOUT.
+      -h, --help      Show this help text.
+      -l, --log       PATH: Write logs to specified path.
+      -p, --prompt    TEXT: Prompt text displayed to STDERR.
+      -q, --quiet     Suppress all STDERR except response.
+      -r, --response  TEXT: Response text printed to STDERR.
+      -t, --timer     SECONDS: Set countdown duration.
+      -u, --urgent    SECONDS: Set threshold for red timer alert.
+      -v, --version   Show version.
+      -x, --extend    Enable diagnostic messages to STDERR/Log.
       
-      Input:  $ pause.sh --timer <seconds>
-      Output: $ [timer] Press [Enter] to continue...
-             $
-      
-      Input:  $ pause.sh --prompt "Optional Prompt" --response "Your response"
-      Output: $ Optional Prompt
-             $ Your Response
-             $
-      
-      Input:  $ pause.sh -p "Optional Prompt" -r "[ Your response ]" -t <seconds>
-      Output: $ [timer] Optional Prompt
-             $ [ Your Response ]
-             $
-      [format of time will be 00:00:00]
-      
-      Input:  $ pause.sh -e
-      Output: $ Press [Enter] to continue... (Presses "j" key}
-             $ j
-             $
-        
-    
-        Note: quiet mode (-q|--quiet) will hide all output except response (-r|--response) text, 
-        if given, until contiuation of process.
-              
-        Code will work inside command substitution to allow for populating variables within a script.
+      Notes:
+          -a, --allowed [only the presented characters (i.e., -ayn, -a yn,  -a  "yn") will be selectable if defined.]
+          -d, --default [ONLY applies if -t, --timer is specified otherwise it is ignored.]
+          A monotonic timer is used to prevent time drift and ensure  accurate  timing even for long countdowns.
+          All text echoed is sent to STDERR, data to variable is separate and sent  to STDOUT.
+          -u, --urgent default is 10 seconds.
