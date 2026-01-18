@@ -60,26 +60,90 @@ if [ ! -t 0 ]; then
     exit 1
 fi
 
-# Cleanup: restore terminal to sane defaults and ensure newline
-cleanup() {
-    printf '\033[K\n' 2>/dev/null || true
-    #shellcheck disable=2059
-    printf "${SHOW_CURSOR}"
-    stty sane 2>/dev/null || true
-}
-
-# Trap EXIT and common signals; ERR for failed commands (useful with set -e)
-trap cleanup EXIT INT TERM HUP ERR 
-
+STTY_SAVE=$(stty -g)
 stty -echo -icanon
 
-: <<COMMENTS
-This software is provided "as-is" without any express or implied warranty. This includes, but is not limited to,
-the WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, and NONINFRINGEMENT. In no event shall the 
-author(s) and/or copyright holders be held liable for any claim, damages, or other liability, whether in an action 
-of contract, tort, or otherwise, arising from, out of, or in connection with the software or the use or other
-dealings in the software. Users are granted the rights to use, modify, and distribute this software at will.
-COMMENTS
+# Cleanup: restore terminal to sane defaults and ensure newline
+#shellcheck disable=2329
+cleanup() {
+    local exit_code=$?
+    
+    # Log the exit to JSON if enabled
+    if [[ -n "${JSON_LOG_FILE:-}" ]]; then
+        local reason="SUCCESS"
+        [[ ${exit_code} -ne 0 ]] && reason="ERROR/SIGNAL"
+        
+        # Log the termination event
+        debug_log "Script exited with code ${exit_code} (${reason})" "TERMINATED"
+    fi
+
+    # Your existing terminal restoration
+    printf '\033[K\n' 2>/dev/null || true
+    #shellcheck disable=2059
+    printf "${SHOW_CURSOR:-}"
+    stty "${STTY_SAVE}"
+    stty sane 2>/dev/null || true
+    
+    exit "${exit_code}"
+}
+
+# Trap EXIT and common signals
+trap 'cleanup' EXIT
+trap 'cleanup' INT TERM HUP
+
+# BASH_VERSINFO[0] contains the major version (2, 3, 4, 5, etc.)
+if [[ -n "${BASH_VERSINFO[0]:-}" ]] && [[ "${BASH_VERSINFO[0]}" -ge 2 ]]; then
+    # The ERR trap is safe for Bash 2.0 and above
+    trap 'cleanup' ERR
+fi
+
+find_user() {
+    # Determine a non-root logged-in user
+    local user uid pid line
+    if [[ "$(id -u)" -ne 0 ]]; then
+        id -un
+        return 0
+    fi
+
+    # systemd loginctl
+    if command -v loginctl >/dev/null 2>&1; then
+        line=$(loginctl list-sessions --no-legend 2>/dev/null | awk '$3!="root"{print $3; exit}')
+        [[ -n ${line} ]] && { printf '%s\n' "${line}"; return 0; }
+    fi
+
+    # look for common GUI session processes
+    local procs=(Xorg weston "kwin_wayland" gnome-session "cinnamon-session" xfce4-session mate-session lxqt-session plasma-session)
+    for p in "${procs[@]}"; do
+        pid=$(pgrep -x "${p}" 2>/dev/null | head -n1) || continue
+        user=$(id -nu "${pid}" 2>/dev/null) || continue
+        [[ -n ${user} && ${user} != root ]] && { printf '%s\n' "${user}"; return 0; }
+    done
+
+    # tty owner
+    if tty=$(tty 2>/dev/null); then
+        uid=$(stat -c %u "${tty}" 2>/dev/null || true)
+        user=$(id -nu "${uid}" 2>/dev/null || true)
+        [[ -n ${user} && ${user} != root ]] && { printf '%s\n' "${user}"; return 0; }
+    fi
+
+    # environment fallbacks
+    if [[ -n ${SUDO_USER:-} && "${SUDO_USER}" != root ]]; then
+        printf '%s\n' "${SUDO_USER}" && return 0
+    fi
+    if [[ -n ${LOGNAME:-} && "${LOGNAME}" != root ]]; then
+        printf '%s\n' "${LOGNAME}" && return 0
+    fi
+
+    # first non-system user in /etc/passwd
+    user=$(awk -F: '($3>=1000)&&($1!="nobody"){print $1; exit}' /etc/passwd)
+    [[ -n ${user} ]] && { printf '%s\n' "${user}"; return 0; }
+
+    return 1
+} # end find_user
+
+# 1. Resolve User and numeric UID once
+LOGGED_IN_USER=$(find_user)
+USER_HOME="/home/${LOGGED_IN_USER}"
 
 # ... (Script metadata and help_text) ...
 SCRIPT="${0##*/}"
@@ -100,9 +164,9 @@ resumes automatically without user interaction.
 
 Usage:
 "${SCRIPT}" [-a, --allowed CHAR] [-C, --color[target][attribute][color]] 
-[-c, --case] [-d, --default CHAR] [-e, --echo] [-h, --help] [-l, --log PATH] 
-[-p. --prompt TEXT] [-q, --quiet] [-r, --response TEXT] [-t, --timer SECONDS] 
-[-u, --urgent SECONDS] [-v, --version] [-x, --extend]
+[-c, --case] [-d, --default CHAR] [-e, --echo] [-h, --help] [-j, --json]
+[-l, --log PATH] [-p. --prompt TEXT] [-q, --quiet] [-r, --response TEXT] 
+[-t, --timer SECONDS] [-u, --urgent SECONDS] [-v, --version] [-x, --extend]
 
 Options:
 -a, --allowed   CHARS: Define an allowed list of specific keys.
@@ -111,6 +175,7 @@ Options:
 -d, --default   CHAR: Set default key for timer expiration.
 -e, --echo      Print selected key to STDOUT.
 -h, --help      Show this help text.
+-j, --json      PATH: writes in .json file format (see below)
 -l, --log       PATH: Write logs to specified path.
 -p, --prompt    TEXT: Prompt text displayed to STDERR.
 -q, --quiet     Suppress all STDERR except response.
@@ -129,6 +194,7 @@ Notes:
     even for long countdowns.
     All text echoed is sent to STDERR, data to variable is separate and sent  to
     STDOUT.
+    .json default file location: "~/.local/state/pause/pause.json" unless defined.
     -u, --urgent default is 10 seconds.
 "${cr}"
 helpText
@@ -147,7 +213,7 @@ CYAN="\033[36m" # cyan
 WHITE="\033[37m" # white
 RED="\033[31m" # red
 BOLD_RED="${BOLD}${RED}" # urgent color (bold red)
-
+SAFE_BOLD_RED="\\033[1m\\033[31m"
 
 display_color_help() {
     # Header
@@ -222,17 +288,6 @@ get_now() {
     elif [[ -n "${BASH_VERSINFO:-}" ]] && { (( BASH_VERSINFO[0] > 4 )) || { (( BASH_VERSINFO[0] == 4 )) && (( BASH_VERSINFO[1] >= 2 )); }; }; then
         printf '%(%s)T' -1
 
-    # 3. macOS Fallback (Bash 3.2 and below)
-    # macOS does not have /proc/uptime. Use sysctl to get seconds since boot.
-    elif [[ "${OSTYPE}" == "darwin"* ]]; then
-        # sysctl returns "kern.boottime: { sec = 1703821234, usec = 0 } ..."
-        # We extract the 'sec' value using awk for safety across old versions.
-        local boot_sec
-        boot_sec=$(sysctl -n kern.boottime | awk '{print $4}' | tr -d ',')
-        local now_sec
-        now_sec=$(date +%s)
-        echo $(( now_sec - boot_sec ))
-
     # 4. Linux Fallback (Bash 2.0+ on systems with /proc)
     elif [ -f /proc/uptime ]; then
         read -r uptime _ < /proc/uptime
@@ -250,31 +305,33 @@ flush_input() {
 }
 
 debug_log() {
-    msg=$1
-    info=${2:-DEBUG}
-    if [[ "${DEBUG}" == true ]]; then
-        printf '[ %s ] %s: %s\n' "$(date +'%F %T')" "${info}" "${msg}" >&2
-    fi
-    if [[ -n "${LOG_FILE}" ]]; then
-        printf '[ %s ] %s: %s\n' "$(date +'%F %T')" "${info}" "${msg}" >&2 >> "${LOG_FILE}"
-    fi
-}
+    local val="$1"
+    local tag="${2:-DEBUG}"
+    local timestamp
+    timestamp=$(date +'%F %T')
 
-# --- Option mapping for long -> short (works on bash 2.x) ---
-OPT_MAP_KEYS="--allow -a --case -c --color -C --default -d --echo -e --help -h --log -l --prompt -p --quiet -q --response -r --timer -t --urgent -u --version -v --extend -x"
-map_get() {
-    local key="$1"
-    local long_opt short_opt
-    set -- "${OPT_MAP_KEYS}"
-    while (( $# )); do
-        long_opt="$1"; short_opt="$2"
-        if [[ "${long_opt}" == "${key}" ]]; then
-            printf '%s' "${short_opt}"
-            return 0
-        fi
-        shift 2 || break
-    done
-    return 1
+    # --- Plain Text Logging ---
+    local log_line="[ ${timestamp} ] ${tag}: ${val}"
+    [[ "${DEBUG}" == true ]] && printf '%s\n' "${log_line}" >&2
+    [[ -n "${LOG_FILE:-}" ]] && printf '%s\n' "${log_line}" >> "${LOG_FILE}"
+
+    # --- JSON Logging (Manual Escaping for 100% Portability) ---
+    if [[ -n "${JSON_LOG_FILE:-}" ]]; then
+        local iso_time
+        iso_time=$(date +%Y-%m-%dT%H:%M:%S%z) # Compatible with old 'date' versions
+
+        # 1. Escape backslashes first, then double quotes
+        # We use a two-step process for Bash 2.0 compatibility
+        local escaped="${val}"
+        escaped=$(printf '%s' "${escaped}" | sed 's/\\/\\\\/g' | sed 's/"/\\"/g')
+        
+        # 2. Escape literal tabs and newlines if they exist
+        escaped=$(printf '%s' "${escaped}" | tr '\n' ' ' | tr '\t' ' ')
+
+        # 3. Final JSON write (ECMA-404 Compliant)
+        printf '{"time":"%s", "tag":"%s", "value":"%s", "pid":%d}\n' \
+            "${iso_time}" "${tag}" "${escaped}" "$$" >> "${JSON_LOG_FILE}"
+    fi
 }
 
 # --- Convert long options to short options in ARGS ---
@@ -447,8 +504,9 @@ URGENT_FLAG=false
 URGENT_TIME=0
 HIDE_CURSOR='\033[?25l'
 SHOW_CURSOR='\033[?25h'
-# color default
-#COLOR_ARG="p14t18r12" # prompt=bold blue; timer=bold red; response=bold green
+# Define the default based on your existing USER_HOME variable
+DEFAULT_JSON_LOG="${USER_HOME}/.local/state/pause/pause.json"
+JSON_LOG_FILE="${DEFAULT_JSON_LOG}"
 
 get_ansi() {
     # $1 = attribute digit (1=bold, 4=underline, 5=blink, etc.)
@@ -486,20 +544,16 @@ is_valid_timer() {
 }
 
 # Clear variables at start (You already do this!)
-COLOR_P="" COLOR_T="" COLOR_R=""
+COLOR_P="" COLOR_T="" COLOR_R="" SAFE_P="" SAFE_T="" SAFE_R=""
 
 # Reset for sourcing & define defaults
 OPTIND=1
-COLOR_P="${BOLD}${BLUE}"   # Default p14
-COLOR_T="${BOLD}${RED}"    # Default t18
-COLOR_R="${BOLD}${GREEN}"  # Default r12
 
 # Enhanced parsing function
 parse_colors() {
     local input="${1:-}"
     [[ -z "$input" ]] && return 0
     
-    # Handle help request inside the color string
     if [[ "$input" == *"h"* ]]; then
         show_color_help
         terminate 0
@@ -520,7 +574,7 @@ parse_colors() {
                     ansi_code=$(get_ansi 0 "$a_digit")
                     used=2
                 else
-                    ansi_code="" # Prevents "disappearing" text if format is invalid
+                    ansi_code="" 
                     used=1
                 fi
 
@@ -534,65 +588,19 @@ parse_colors() {
             *) i=$((i + 1)) ;;
         esac
     done
+
+    # Finalize the log-safe versions ONCE after parsing is complete
+    # Use :-"" to ensure they are at least an empty string for the log
+    SAFE_P="${COLOR_P//$'\e'/\\033}"
+    SAFE_T="${COLOR_T//$'\e'/\\033}"
+    SAFE_R="${COLOR_R//$'\e'/\\033}"
+    
+    export COLOR_P COLOR_T COLOR_R SAFE_P SAFE_T SAFE_R
 }
 
-# --- Parse options with getopts (short options only) ---
-while getopts ":a:ep:r:t:Ccd:qxl:u:vhz" opt; do
+#shellcheck disable=2220
+while getopts ":l:j:x" opt; do
     case "${opt}" in
-        a)  if [[ -z "${OPTARG}" || "${OPTARG}" == -* ]]; then
-                debug_log "${SCRIPT} -${opt}: No valid character argument given, found ('${OPTARG}')."
-                echo "Error: Option -${opt} requires a valid character argument, not ('${opt}')." >&2
-                exit 1
-            fi
-
-            ALLOWED="${OPTARG}"
-            ALLOWED_CHARS=()
-            seen=""  # simple seen-string for bash < 4
-            for ((i=0; i<${#ALLOWED}; i++)); do
-                ch=${ALLOWED:i:1}
-                if [[ "${ch}" =~ [[:alnum:]] ]]; then
-                    # membership test in seen (case-sensitive)
-                    if [[ "${seen}" != *"${ch}"* ]]; then
-                        ALLOWED_CHARS+=( "${ch}" )
-                        seen+="${ch}"
-                    fi
-                fi
-            done
-            ;;
-
-        c)  CASE_INSENSITIVE=true ; # turns on case insensitivity on allowed characters [-a, --allowed]
-            ;;
-
-        C)  NEXT_VAL="${!OPTIND}"
-
-            # If NEXT_VAL is 'h' or contains 'h', show help
-            if [[ "$NEXT_VAL" == "h" || "$NEXT_VAL" == *"h"* ]]; then
-                show_color_help
-                exit 0
-            fi
-
-            # Only parse if NEXT_VAL is NOT another flag and NOT empty
-            if [[ -n "$NEXT_VAL" && "$NEXT_VAL" != -* ]]; then
-                parse_colors "$NEXT_VAL"
-                OPTIND=$((OPTIND + 1))
-            fi
-            export COLOR_P COLOR_T COLOR_R
-            # If no argument, the default COLOR_P/T/R (p14, t18, r12) remain
-            ;;
-        d)  if [[ -z "${OPTARG}" || "${OPTARG}" == -* ]]; then
-                debug_log "${SCRIPT} -${opt}: No valid character argument given, found ('${OPTARG}')."
-                printf '[  %s  ]: %s\n' "$(date +%Y-%m-%dT%H%M)" "${SCRIPT} -${opt}: requires a valid character argument, found ('${OPTARG}')." >&2
-                exit 1
-            fi
-            DEFAULT_KEY="${OPTARG}" 
-            ;;
-
-        e)  ECHO_KEY=true 
-            ;;
-
-        h)  printf '%s\n' "${HELP_TEXT}"; exit 0 
-            ;;
-
         l)  if [[ -z "${OPTARG}" || "${OPTARG}" == -* ]]; then
                 debug_log "${SCRIPT} -${opt}: No valid log filepath argument given, found ('${OPTARG}')."
                 printf '[  %s  ]: %s\n' "$(date +%Y-%m-%dT%H%M)" "${SCRIPT} -${opt}: requires a valid log filepath argument, found ('${OPTARG}')." >&2
@@ -629,6 +637,108 @@ while getopts ":a:ep:r:t:Ccd:qxl:u:vhz" opt; do
                 fi
             fi
             ;;
+
+            j)  if [[ -z "${OPTARG:-}" || ( "${OPTARG:-}" == -* && "${OPTARG:-}" != ./* ) ]]; then
+                    debug_log "${SCRIPT} -${opt}: No valid JSON log filepath argument given."
+                    printf '[  %s  ]: %s\n' "$(date +%Y-%m-%dT%H%M)" "${SCRIPT} -${opt}: requires a valid path." >&2
+                    exit 1
+                fi
+                JSON_LOG_FILE="${OPTARG:-"${USER_HOME}/.local/state/pause/pause.json"}"
+
+
+            JSON_LOG_FILE="${OPTARG:-"${USER_HOME}/.local/state/pause/pause.json"}"
+            JSON_LOG_DIR=$(dirname "${JSON_LOG_FILE:-}")
+
+            # Create directory if missing
+            if [ ! -d "${JSON_LOG_DIR}" ]; then
+                if ! mkdir -p "${JSON_LOG_DIR}"; then
+                    debug_log "${SCRIPT} -${opt}: failed to create JSON log directory '${JSON_LOG_DIR}'."
+                    printf '[  %s  ]: %s\n' "$(date +%Y-%m-%dT%H%M)" "${SCRIPT} -${opt}: failed to create JSON log directory." >&2
+                    exit 1
+                fi
+            fi
+
+            # Validate file properties
+            if [ -e "${JSON_LOG_FILE}" ]; then
+                if [ ! -f "${JSON_LOG_FILE}" ] || [ ! -w "${JSON_LOG_FILE}" ]; then
+                    debug_log "${SCRIPT} -${opt}: JSON log path invalid or not writable: '${JSON_LOG_FILE}'."
+                    printf '[  %s  ]: %s\n' "$(date +%Y-%m-%dT%H%M)" "${SCRIPT} -${opt}: JSON log path invalid or not writable." >&2
+                    exit 1
+                fi
+            else
+                # Attempt to touch the file to verify write access
+                if ! : > "${JSON_LOG_FILE}" 2>/dev/null; then
+                    debug_log "${SCRIPT} -${opt}: failed to create JSON log file '${JSON_LOG_FILE}'."
+                    printf '[  %s  ]: %s\n' "$(date +%Y-%m-%dT%H%M)" "${SCRIPT} -${opt}: failed to create JSON log file." >&2
+                    exit 1
+                fi
+            fi
+            ;;
+        x)  DEBUG=true 
+            ;;
+
+        esac
+done
+
+# --- Parse options with getopts (short options only) ---
+while getopts ":a:cC:d:ehp:qr:t:u:vxz" opt; do
+    case "${opt}" in
+        a)  if [[ -z "${OPTARG}" || "${OPTARG}" == -* ]]; then
+                debug_log "${SCRIPT} -${opt}: No valid character argument given, found ('${OPTARG}')."
+                echo "Error: Option -${opt} requires a valid character argument, not ('${opt}')." >&2
+                exit 1
+            fi
+
+            ALLOWED="${OPTARG}"
+            ALLOWED_CHARS=()
+            seen=""  # simple seen-string for bash < 4
+            for ((i=0; i<${#ALLOWED}; i++)); do
+                ch=${ALLOWED:i:1}
+                if [[ "${ch}" =~ [[:alnum:]] ]]; then
+                    # membership test in seen (case-sensitive)
+                    if [[ "${seen}" != *"${ch}"* ]]; then
+                        ALLOWED_CHARS+=( "${ch}" )
+                        seen+="${ch}"
+                    fi
+                fi
+            done
+            ;;
+
+        c)  CASE_INSENSITIVE=true ; # turns on case insensitivity on allowed characters [-a, --allowed]
+            ;;
+
+        C)  NEXT_VAL="${!OPTIND}"
+
+            COLOR_P="${BOLD}${BLUE}"   # Default p14
+            COLOR_T="${BOLD}${RED}"    # Default t18
+            COLOR_R="${BOLD}${GREEN}"  # Default r12
+
+            # If NEXT_VAL is 'h' or contains 'h', show help
+            if [[ "$NEXT_VAL" == "h" || "$NEXT_VAL" == *"h"* ]]; then
+                show_color_help
+                exit 0
+            fi
+
+            # Only parse if NEXT_VAL is NOT another flag and NOT empty
+            if [[ -n "$NEXT_VAL" && "$NEXT_VAL" != -* ]]; then
+                parse_colors "$NEXT_VAL"
+                OPTIND=$((OPTIND + 1))
+            fi
+            ;;
+        d)  if [[ -z "${OPTARG}" || "${OPTARG}" == -* ]]; then
+                debug_log "${SCRIPT} -${opt}: No valid character argument given, found ('${OPTARG}')."
+                printf '[  %s  ]: %s\n' "$(date +%Y-%m-%dT%H%M)" "${SCRIPT} -${opt}: requires a valid character argument, found ('${OPTARG}')." >&2
+                exit 1
+            fi
+            DEFAULT_KEY="${OPTARG}" 
+            ;;
+
+        e)  ECHO_KEY=true 
+            ;;
+
+        h)  printf '%s\n' "${HELP_TEXT}"; exit 0 
+            ;;
+
 
         p)  if [[ -z "${OPTARG}" || "${OPTARG}" == -* ]]; then
                 debug_log "${SCRIPT} -${opt}: No valid text argument given, found ('${OPTARG}')."
@@ -669,13 +779,7 @@ while getopts ":a:ep:r:t:Ccd:qxl:u:vhz" opt; do
         v)  printf '%s\n' "${SCRIPT} v.${VERSION}" >&2 ; exit 0 
             ;;
 
-        x)  DEBUG=true 
-            ;;
-
-        z)  printf "%bCOLOR CUSTOMIZATION HELP%b\n" "${BOLD}" "${RESET}"
-            printf "Usage: -C [target][attribute][color]\n\n"
-            printf "%bTARGETS:%b p: Prompt t: Timer r: Response\n" "${BOLD}" "${RESET}"
-            printf "%bCOLORS:%b 2:Grn 3:Yel 4:Blu 5:Mag 6:Cyn 7:Whi 8:Red\n" "${BOLD}" "${RESET}"
+        z)  display_color_help
             exit 0 ;;
 
         :)  printf '%s\n' "Option ${OPTARG} requires an argument." >&2 ; exit 2 
@@ -695,16 +799,22 @@ if [[ -n "${ALLOWED_CHARS[*]}" ]] ; then
     debug_log "\"${ALLOWED_CHARS[*]}\"" ALLOWED_CHARS
 else debug_log \"all\" "ALLOWED_CHARS"
 fi
-debug_log "\"${URGENT_FLAG}\"" URGENT_FLAG
-debug_log "\"${URGENT_TIME}\"" URGENT_TIME
-debug_log "\"${ECHO_KEY}\"" ECHO_KEY
-debug_log "\"${TIMER}\"" TIMER
-debug_log "\"${DEFAULT_KEY}\"" DEFAULT_KEY
-debug_log "\"${QUIET}\"" QUIET
-debug_log "\"${DEBUG}\"" DEBUG 
-debug_log "\"${PROMPT}\"" PROMPT; 
+debug_log "\"${URGENT_FLAG:-}\"" URGENT_FLAG
+debug_log "\"${URGENT_TIME:-}\"" URGENT_TIME
+debug_log "\"${SAFE_BOLD_RED:-}\"" URGENT_COLOR
+debug_log "\"${ECHO_KEY:-}\"" ECHO_KEY
+debug_log "\"${TIMER:-}\"" TIMER
+debug_log "\"${SAFE_T:-}\"" TIMER_COLOR
+debug_log "\"${DEFAULT_KEY:-}\"" DEFAULT_KEY
+debug_log "\"${QUIET:-}\"" QUIET
+debug_log "\"${DEBUG:-}\"" DEBUG 
+debug_log "\"${PROMPT:-}\"" PROMPT; 
+debug_log "\"${SAFE_P:-}\"" PROMPT_COLOR; 
 
-[[ -n "${RESPONSE}" ]] && debug_log "${RESPONSE}" RESPONSE
+[[ -n "${RESPONSE}" ]] && { 
+    debug_log "${RESPONSE}" RESPONSE 
+    debug_log "${SAFE_R}" RESPONSE_COLOR 
+}
 [[ -f "${LOG_FILE}" ]] && debug_log "\"$(dirname "${LOG_FILE}")/${LOG_FILE}\"" LOG_FILE
 
 # Process the ALLOWED string AFTER the getopts loop finishes
@@ -824,19 +934,22 @@ while true; do
     fi
 
     # Non-blocking read unchanged
-    if LC_ALL=C IFS= read -rsn1 -t 0.1 char 2>/dev/null; then
-        case "${char}" in
-            [A-Za-z0-9]|" "|"")
-                # Only proceed if the character is allowed
-                if is_allowed_char "${char}"; then
-                    if [[ -z "${char}" ]]; then USER_KEY="ENTER"
-                    elif [[ "${char}" == " " ]]; then USER_KEY="SPACE"
-                    else USER_KEY="${char}"
+    if [[ "${TIMER}" -gt 0 && -n "${TIMER}" ]] ; then 
+        if LC_ALL=C IFS= read -rsn1 -t 0.1 char 2>/dev/null; then
+            case "${char}" in
+                [A-Za-z0-9]|" "|"")
+                    # Only proceed if the character is allowed
+                    if is_allowed_char "${char}"; then
+                        if [[ -z "${char}" ]]; then USER_KEY="ENTER"
+                        elif [[ "${char}" == " " ]]; then USER_KEY="SPACE"
+                        else USER_KEY="${char}"
+                        fi
+                        break
                     fi
-                    break
-                fi
-                ;;
-        esac
+                    ;;
+            esac
+        fi
+    else LC_ALL=C IFS= read -rsn1 char 2>/dev/null
     fi
 done
 
@@ -855,3 +968,5 @@ printf "${SHOW_CURSOR}" && debug_log "Reshowing cursor using ANSI \"\\e[?25h\"" 
 
 # Debug prefix (No newline)
 [[ -n "${RESPONSE}" ]] && printf "${COLOR_R}%s${RESET}\n" "${RESPONSE}" >&2 
+
+exit 0
